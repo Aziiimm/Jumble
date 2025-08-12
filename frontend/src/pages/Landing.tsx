@@ -23,9 +23,9 @@ const games = [
 const Landing: React.FC = () => {
   return (
     <div>
-      <div className="3xl:w-7/12 mx-auto w-8/12 pt-8">
+      <div className="mx-auto w-8/12 pt-8 3xl:w-7/12">
         <div className="flex flex-col-reverse items-center lg:flex-row lg:justify-between">
-          <p className="3xl:text-7xl mt-4 space-y-2 text-center font-adlam text-4xl text-white sm:text-center sm:text-5xl md:mt-0 md:text-5xl lg:w-5/12 lg:text-start lg:text-4xl xl:text-5xl 2xl:text-6xl">
+          <p className="mt-4 space-y-2 text-center font-adlam text-4xl text-white sm:text-center sm:text-5xl md:mt-0 md:text-5xl lg:w-5/12 lg:text-start lg:text-4xl xl:text-5xl 2xl:text-6xl 3xl:text-7xl">
             <div>Party Games, Anywhere.</div>
             <div className="text-nowrap text-center text-sm sm:text-center sm:text-base lg:text-start 2xl:text-2xl">
               Play with Friends or Against AI opponents
@@ -35,7 +35,7 @@ const Landing: React.FC = () => {
         </div>
       </div>
 
-      <div className="3xl:w-7/12 mx-auto w-8/12 pb-12 pt-8 sm:pb-40 xl:pb-24">
+      <div className="mx-auto w-8/12 pb-12 pt-8 sm:pb-40 xl:pb-24 3xl:w-7/12">
         <div className="flex flex-col items-center justify-center gap-8 font-adlam lg:flex-row xl:justify-between">
           {/* Game Selector */}
           <div className="mt-4 rounded-3xl bg-[#b1dfbc] px-8 shadow-2xl lg:w-7/12 2xl:px-16">
@@ -44,8 +44,9 @@ const Landing: React.FC = () => {
             </label>
             <div className="grid w-full grid-cols-2 gap-4 md:px-8 lg:grid-cols-2 lg:px-0">
               {games.map((game) => (
-                <div
+                <Link
                   key={game.id}
+                  to={game.id === 1 ? "/wordhunter" : "#"}
                   className="flex flex-col items-center rounded-lg border bg-[#fcf8cf] p-2 shadow-md transition duration-150 ease-in-out hover:shadow-lg sm:px-2 sm:py-4 lg:px-0"
                 >
                   <img
@@ -56,7 +57,7 @@ const Landing: React.FC = () => {
                   <h3 className="w-full text-nowrap text-center text-xs sm:text-base sm:text-lg lg:text-sm xl:text-lg 2xl:text-xl">
                     {game.title}
                   </h3>
-                </div>
+                </Link>
               ))}
             </div>
             <div className="pb-10">

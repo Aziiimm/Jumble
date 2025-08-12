@@ -83,6 +83,16 @@ input[type="number"].no-spinners {
   }
 }
 
+/* Hide scrollbars but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
 @font-face {
   font-family: "adlam";
   src: url("./assets/fonts/ADLaMDisplay-Regular.ttf") format("truetype");

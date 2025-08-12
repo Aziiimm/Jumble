@@ -11,7 +11,7 @@ import Landing from "./pages/Landing";
 import Error from "./pages/Error";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
-import About from "./pages/About";
+import WordHunter from "./pages/games/Wordhunter";
 
 // toast
 import { Toaster } from "./components/ui/toaster";
@@ -26,7 +26,9 @@ const App: React.FC = () => {
             <Route path="/" element={<Landing />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/about" element={<About />} />
+
+            {/* games */}
+            <Route path="/wordhunter" element={<WordHunter />} />
             {/* for page not found */}
             <Route path="*" element={<Error />} />
           </Route>
