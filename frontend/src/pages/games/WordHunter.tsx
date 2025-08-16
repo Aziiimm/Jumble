@@ -227,7 +227,7 @@ const WordHunter: React.FC = () => {
 
   return (
     <div className="px-6 pb-20 pt-10 font-adlam text-[#FCF8CF]">
-      <div className="mx-auto w-9/12">
+      <div className="mx-auto w-full sm:w-9/12">
         {/* Game Header */}
         <div className="mb-6 text-center">
           <h1 className="text-4xl">Word Hunter</h1>
@@ -243,7 +243,7 @@ const WordHunter: React.FC = () => {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           {/* Left Panel - Found Words */}
           <div className="lg:col-span-3">
-            <div className="flex h-[600px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl">
+            <div className="flex h-[400px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl sm:h-[600px]">
               <div className="mb-4 flex justify-between text-center">
                 <div className="text-lg">Words: {totalWords}</div>
                 <div className="text-lg">Points: {totalPoints}</div>
@@ -251,7 +251,7 @@ const WordHunter: React.FC = () => {
 
               <div className="flex-1 overflow-hidden">
                 {/* Hidden scrollbar but keeps scroll functionality */}
-                <div className="scrollbar-hide h-full space-y-3 overflow-y-auto pr-2">
+                <div className="scrollbar-hide h-full space-y-3 overflow-y-auto">
                   {foundWords.length === 0 ? (
                     <p className="text-center text-[#b1dfbc]">
                       No words found yet!
@@ -278,9 +278,9 @@ const WordHunter: React.FC = () => {
 
           {/* Middle Panel - Game Board */}
           <div className="select-none lg:col-span-6">
-            <div className="flex h-[600px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl">
+            <div className="flex flex-col rounded-2xl bg-[#01685e] px-4 py-6 shadow-xl sm:h-[600px] sm:px-6">
               {/* Game Board - Centered with reduced spacing */}
-              <div className="flex flex-1 items-center justify-center">
+              <div className="flex items-center justify-center sm:flex-1">
                 <div className="relative">
                   {/* SVG overlay for trail lines */}
                   {selectedTiles.length > 1 && (
@@ -292,7 +292,7 @@ const WordHunter: React.FC = () => {
                       style={{
                         margin: "-24px",
                         transform: "translate(24px, 24px)",
-                      }} // Center the SVG properly
+                      }}
                     >
                       <path
                         d={generateTrailPath()}
@@ -307,12 +307,12 @@ const WordHunter: React.FC = () => {
                     </svg>
                   )}
 
-                  <div className="grid grid-cols-5 gap-4">
+                  <div className="grid grid-cols-5 gap-2 sm:gap-4">
                     {board.map((row, rowIndex) =>
                       row.map((letter, colIndex) => (
                         <div
                           key={`${rowIndex}-${colIndex}`}
-                          className={`relative flex h-20 w-20 cursor-pointer items-center justify-center rounded-lg text-2xl font-bold transition-all duration-200 ${
+                          className={`relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl text-2xl font-bold transition-all duration-200 sm:h-20 sm:w-20 ${
                             isTileSelected(rowIndex, colIndex)
                               ? "bg-[#ff6b6b] text-white shadow-lg"
                               : "bg-[#fcf8cf] text-[#876124] hover:bg-[#f0e68c]"
@@ -327,7 +327,7 @@ const WordHunter: React.FC = () => {
                         >
                           {/* Trail outline for tiles in the current path */}
                           {isPartOfTrail(rowIndex, colIndex) && (
-                            <div className="pointer-events-none absolute inset-0 rounded-lg border-2 border-red-500 border-opacity-30"></div>
+                            <div className="pointer-events-none absolute inset-0 rounded-lg"></div>
                           )}
                           {letter}
                         </div>
@@ -348,8 +348,8 @@ const WordHunter: React.FC = () => {
           </div>
 
           {/* Right Panel - Player List */}
-          <div className="lg:col-span-3">
-            <div className="flex h-[600px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl">
+          <div className="h-[400px] sm:h-[600px] lg:col-span-3">
+            <div className="flex h-[400px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl sm:h-[600px]">
               {/* Room Code */}
               <div className="mb-4 flex justify-between">
                 {/* PLACEHOLDER ROOM CODE WILL FILL WITH ROOM CODE GENERATED FROM BACKEND LATER  */}
@@ -361,9 +361,9 @@ const WordHunter: React.FC = () => {
               </div>
 
               {/* Player List */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex h-[400px] overflow-hidden sm:h-[500px]">
                 {/* Hidden scrollbar but keeps scroll functionality */}
-                <div className="scrollbar-hide h-full space-y-3 overflow-y-auto pr-2">
+                <div className="scrollbar-hide w-full space-y-3 overflow-y-auto">
                   {players.map((player) => (
                     <div
                       key={player.id}
