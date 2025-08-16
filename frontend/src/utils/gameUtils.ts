@@ -115,7 +115,7 @@ export const isValidPath = (positions: number[][]): boolean => {
  */
 export const getAllPossibleWords = (board: string[][]): string[] => {
   const words: string[] = [];
-  const visited = new Set<string>();
+  // const visited = new Set<string>();
 
   const dfs = (
     row: number,
@@ -125,7 +125,7 @@ export const getAllPossibleWords = (board: string[][]): string[] => {
   ) => {
     if (row < 0 || row >= 5 || col < 0 || col >= 5) return;
 
-    const key = `${row},${col}`;
+    // const key = `${row},${col}`;
     if (path.some(([r, c]) => r === row && c === col)) return;
 
     const newWord = currentWord + board[row][col];

@@ -1,6 +1,6 @@
 // src/pages/games/WordHunter.tsx
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   generateGameBoard,
   isValidWord,
@@ -95,7 +95,7 @@ const WordHunter: React.FC = () => {
   >("neutral");
 
   const dragStartRef = useRef<number[] | null>(null);
-  const boardRef = useRef<HTMLDivElement>(null);
+  // const boardRef = useRef<HTMLDivElement>(null);
 
   // Audio refs for sound effects
   const successSoundRef = useRef<HTMLAudioElement | null>(null);

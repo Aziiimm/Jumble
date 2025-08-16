@@ -11,7 +11,7 @@ import Landing from "./pages/Landing";
 import Error from "./pages/Error";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
-import WordHunter from "./pages/games/Wordhunter";
+import WordHunter from "./pages/games/WordHunter";
 
 // toast
 import { Toaster } from "./components/ui/toaster";
