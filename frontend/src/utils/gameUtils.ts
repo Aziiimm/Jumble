@@ -79,7 +79,7 @@ export const isValidWord = (word: string): boolean => {
  */
 export const calculateWordPoints = (word: string): number => {
   if (word.length < 3) return 0;
-  return word.length * 100;
+  return word.length * 100 - 300 + word.length * 100;
 };
 
 /**

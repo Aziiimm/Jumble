@@ -90,16 +90,48 @@ const WordHunter: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [board, setBoard] = useState<string[][]>([]);
   const [players] = useState<Player[]>(mockPlayers);
+  const [wordStatus, setWordStatus] = useState<
+    "neutral" | "success" | "duplicate"
+  >("neutral");
 
   const dragStartRef = useRef<number[] | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
+
+  // Audio refs for sound effects
+  const successSoundRef = useRef<HTMLAudioElement | null>(null);
 
   // Generate random board on component mount
   useEffect(() => {
     setBoard(generateGameBoard());
   }, []);
 
-  // Global mouse event listeners to handle dragging off the board
+  // Initialize audio elements
+  useEffect(() => {
+    successSoundRef.current = new Audio("/sounds/success.mp3");
+
+    // Preload audio file
+    successSoundRef.current.load();
+  }, []);
+
+  // Function to play success sound
+  const playSuccessSound = () => {
+    if (successSoundRef.current) {
+      successSoundRef.current.currentTime = 0; // Reset to start
+      successSoundRef.current
+        .play()
+        .catch((err: any) => console.log("Audio play failed:", err));
+    }
+  };
+
+  // Function to vibrate device (mobile only)
+  const vibrateDevice = () => {
+    if ("vibrate" in navigator) {
+      // Vibrate pattern: 100ms on, 50ms off, 100ms on
+      navigator.vibrate([100, 50, 100]);
+    }
+  };
+
+  // Global mouse and touch event listeners to handle dragging off the board
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (isDragging) {
@@ -113,12 +145,20 @@ const WordHunter: React.FC = () => {
       }
     };
 
+    const handleGlobalTouchEnd = () => {
+      if (isDragging) {
+        handleMouseUp();
+      }
+    };
+
     document.addEventListener("mouseup", handleGlobalMouseUp);
     document.addEventListener("mouseleave", handleGlobalMouseLeave);
+    document.addEventListener("touchend", handleGlobalTouchEnd);
 
     return () => {
       document.removeEventListener("mouseup", handleGlobalMouseUp);
       document.removeEventListener("mouseleave", handleGlobalMouseLeave);
+      document.removeEventListener("touchend", handleGlobalTouchEnd);
     };
   }, [isDragging]);
 
@@ -159,9 +199,28 @@ const WordHunter: React.FC = () => {
       if (!alreadySelected) {
         const newSelectedTiles = [...selectedTiles, newPos];
         setSelectedTiles(newSelectedTiles);
-        setCurrentWord(
-          newSelectedTiles.map((pos) => board[pos[0]][pos[1]]).join(""),
-        );
+        const newWord = newSelectedTiles
+          .map((pos) => board[pos[0]][pos[1]])
+          .join("");
+        setCurrentWord(newWord);
+
+        // Check word status in real-time as user drags
+        if (newWord.length >= 3) {
+          if (isValidWord(newWord)) {
+            const wordExists = foundWords.some(
+              (found) => found.word === newWord,
+            );
+            if (!wordExists) {
+              setWordStatus("success"); // Green background for valid new word
+            } else {
+              setWordStatus("duplicate"); // Yellow background for duplicate word
+            }
+          } else {
+            setWordStatus("neutral"); // Default background for invalid word
+          }
+        } else {
+          setWordStatus("neutral"); // Default background for short words
+        }
       }
     }
   };
@@ -179,9 +238,21 @@ const WordHunter: React.FC = () => {
         const wordExists = foundWords.some((found) => found.word === word);
         if (!wordExists) {
           setFoundWords((prev) => [...prev, { word, points }]);
+          vibrateDevice(); // Vibrate device for success
+          playSuccessSound(); // Play success sound
+          // Keep success status for a moment to show completion
+        } else {
+          // Keep duplicate status for a moment to show feedback
         }
+      } else {
+        // Invalid word - no sound needed
       }
     }
+
+    // Reset word status after a delay to show the feedback
+    setTimeout(() => {
+      setWordStatus("neutral");
+    }, 1);
 
     setIsDragging(false);
     setSelectedTiles([]);
@@ -201,10 +272,19 @@ const WordHunter: React.FC = () => {
 
   // Get tile position for SVG path calculation
   const getTileCenter = (row: number, col: number) => {
-    const tileSize = 80; // h-20 = 80px
-    const gap = 16; // gap-4 = 16px
-    const x = col * (tileSize + gap) + tileSize / 2;
-    const y = row * (tileSize + gap) + tileSize / 2;
+    // For mobile: h-14 = 56px, gap-2 = 8px
+    // For desktop: h-20 = 80px, gap-4 = 16px
+    const isMobile = window.innerWidth < 640; // sm breakpoint
+    const tileSize = isMobile ? 56 : 80;
+    const gap = isMobile ? 8 : 16;
+
+    // Convert to percentage-based coordinates (0-100)
+    const totalWidth = 5 * tileSize + 4 * gap; // 5 columns
+    const totalHeight = 5 * tileSize + 4 * gap; // 5 rows
+
+    const x = ((col * (tileSize + gap) + tileSize / 2) / totalWidth) * 100;
+    const y = ((row * (tileSize + gap) + tileSize / 2) / totalHeight) * 100;
+
     return { x, y };
   };
 
@@ -227,7 +307,7 @@ const WordHunter: React.FC = () => {
 
   return (
     <div className="px-6 pb-20 pt-10 font-adlam text-[#FCF8CF]">
-      <div className="mx-auto w-full sm:w-9/12">
+      <div className="mx-auto w-full sm:w-10/12 lg:w-11/12 2xl:w-10/12 3xl:w-9/12">
         {/* Game Header */}
         <div className="mb-6 text-center">
           <h1 className="text-4xl">Word Hunter</h1>
@@ -235,15 +315,23 @@ const WordHunter: React.FC = () => {
 
         {/* Current Word Display */}
         <div className="mb-6 flex items-center justify-center">
-          <div className="inline-block flex min-h-[2.5rem] min-w-[6rem] items-center justify-center rounded-lg bg-[#01685E] px-6">
+          <div
+            className={`inline-block flex min-h-[2.5rem] min-w-[6rem] items-center justify-center rounded-lg px-6 transition-all duration-150 ${
+              wordStatus === "success"
+                ? "scale-105 bg-green-500 shadow-lg"
+                : wordStatus === "duplicate"
+                  ? "scale-105 bg-yellow-500 shadow-lg"
+                  : "bg-[#01685E]"
+            }`}
+          >
             <span className="text-xl">{currentWord || ""}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           {/* Left Panel - Found Words */}
-          <div className="lg:col-span-3">
-            <div className="flex h-[400px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl sm:h-[600px]">
+          <div className="order-2 lg:order-1 lg:col-span-3">
+            <div className="flex h-[400px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl lg:h-[600px]">
               <div className="mb-4 flex justify-between text-center">
                 <div className="text-lg">Words: {totalWords}</div>
                 <div className="text-lg">Points: {totalPoints}</div>
@@ -277,27 +365,36 @@ const WordHunter: React.FC = () => {
           </div>
 
           {/* Middle Panel - Game Board */}
-          <div className="select-none lg:col-span-6">
+          <div className="order-1 select-none lg:order-2 lg:col-span-6">
             <div className="flex flex-col rounded-2xl bg-[#01685e] px-4 py-6 shadow-xl sm:h-[600px] sm:px-6">
               {/* Game Board - Centered with reduced spacing */}
               <div className="flex items-center justify-center sm:flex-1">
-                <div className="relative">
+                <div
+                  className="relative touch-none"
+                  style={{
+                    touchAction: "none",
+                    WebkitTouchCallout: "none",
+                    WebkitUserSelect: "none",
+                    userSelect: "none",
+                  }}
+                >
                   {/* SVG overlay for trail lines */}
                   {selectedTiles.length > 1 && (
                     <svg
                       className="pointer-events-none absolute inset-0"
-                      width="448"
-                      height="448"
-                      viewBox="0 0 448 448"
+                      width="100%"
+                      height="100%"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
                       style={{
-                        margin: "-24px",
-                        transform: "translate(24px, 24px)",
+                        margin: "-2px",
+                        transform: "translate(2px, 2px)",
                       }}
                     >
                       <path
                         d={generateTrailPath()}
                         stroke="#ff6b6b"
-                        strokeWidth="6"
+                        strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         fill="none"
@@ -307,12 +404,14 @@ const WordHunter: React.FC = () => {
                     </svg>
                   )}
 
-                  <div className="grid grid-cols-5 gap-2 sm:gap-4">
+                  <div className="grid grid-cols-5 gap-2 sm:gap-3 md:gap-4">
                     {board.map((row, rowIndex) =>
                       row.map((letter, colIndex) => (
                         <div
                           key={`${rowIndex}-${colIndex}`}
-                          className={`relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl text-2xl font-bold transition-all duration-200 sm:h-20 sm:w-20 ${
+                          data-row={rowIndex}
+                          data-col={colIndex}
+                          className={`relative flex h-[3.5rem] w-[3.5rem] cursor-pointer items-center justify-center rounded-2xl text-2xl font-bold transition-all duration-200 sm:h-[5rem] sm:w-[5rem] md:h-[5.5rem] md:w-[5.5rem] lg:h-[4.5rem] lg:w-[4.5rem] xl:h-20 xl:w-20 ${
                             isTileSelected(rowIndex, colIndex)
                               ? "bg-[#ff6b6b] text-white shadow-lg"
                               : "bg-[#fcf8cf] text-[#876124] hover:bg-[#f0e68c]"
@@ -324,6 +423,30 @@ const WordHunter: React.FC = () => {
                             handleTileMouseEnter(rowIndex, colIndex)
                           }
                           onMouseUp={handleMouseUp}
+                          onTouchStart={() =>
+                            handleTileMouseDown(rowIndex, colIndex)
+                          }
+                          onTouchMove={(e) => {
+                            e.preventDefault();
+                            const touch = e.touches[0];
+                            const element = document.elementFromPoint(
+                              touch.clientX,
+                              touch.clientY,
+                            );
+                            if (
+                              element &&
+                              element.closest("[data-row][data-col]")
+                            ) {
+                              const row = parseInt(
+                                element.getAttribute("data-row") || "0",
+                              );
+                              const col = parseInt(
+                                element.getAttribute("data-col") || "0",
+                              );
+                              handleTileMouseEnter(row, col);
+                            }
+                          }}
+                          onTouchEnd={handleMouseUp}
                         >
                           {/* Trail outline for tiles in the current path */}
                           {isPartOfTrail(rowIndex, colIndex) && (
@@ -339,8 +462,11 @@ const WordHunter: React.FC = () => {
 
               {/* Game Instructions */}
               <div className="mt-4 flex-shrink-0 text-center text-sm text-[#b1dfbc]">
-                <p>
+                <p className="hidden sm:block">
                   Click and drag to connect adjacent letters and form words!
+                </p>
+                <p className="sm:hidden">
+                  Tap and drag to connect adjacent letters and form words!
                 </p>
                 <p>Words must be at least 3 letters long.</p>
               </div>
@@ -348,8 +474,8 @@ const WordHunter: React.FC = () => {
           </div>
 
           {/* Right Panel - Player List */}
-          <div className="h-[400px] sm:h-[600px] lg:col-span-3">
-            <div className="flex h-[400px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl sm:h-[600px]">
+          <div className="order-3 h-[400px] lg:col-span-3 lg:h-[600px]">
+            <div className="flex h-[400px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl lg:h-[600px]">
               {/* Room Code */}
               <div className="mb-4 flex justify-between">
                 {/* PLACEHOLDER ROOM CODE WILL FILL WITH ROOM CODE GENERATED FROM BACKEND LATER  */}
