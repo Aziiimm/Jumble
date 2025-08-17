@@ -411,7 +411,7 @@ const WordHunter: React.FC = () => {
                           key={`${rowIndex}-${colIndex}`}
                           data-row={rowIndex}
                           data-col={colIndex}
-                          className={`relative flex h-[3.5rem] w-[3.5rem] cursor-pointer items-center justify-center rounded-2xl text-2xl font-bold transition-all duration-200 sm:h-[5rem] sm:w-[5rem] md:h-[5.5rem] md:w-[5.5rem] lg:h-[4.5rem] lg:w-[4.5rem] xl:h-20 xl:w-20 ${
+                          className={`relative flex h-[3.5rem] w-[3.5rem] cursor-pointer items-center justify-center rounded-xl text-2xl font-bold shadow-2xl transition-all duration-200 sm:h-[5rem] sm:w-[5rem] md:h-[5.5rem] md:w-[5.5rem] lg:h-[4.5rem] lg:w-[4.5rem] xl:h-20 xl:w-20 ${
                             isTileSelected(rowIndex, colIndex)
                               ? "bg-[#ff6b6b] text-white shadow-lg"
                               : "bg-[#fcf8cf] text-[#876124] hover:bg-[#f0e68c]"
