@@ -20,7 +20,7 @@ services:
     image: redis:7
     container_name: jumble-redis
     ports:
-      - "6379:6379"
+      - "5000:5000"
     volumes:
       - redisdata:/data
 

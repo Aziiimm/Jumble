@@ -7,6 +7,7 @@
 
 import express from "express";
 import cors from "cors";
+import bcrypt from "bcrypt";
 import { pool, dbOk } from "./db.js";
 import { redisOk } from "./redis.js";
 import gamesRouter from "./routes/games.routes.js";

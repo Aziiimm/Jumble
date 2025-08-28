@@ -1,11 +1,43 @@
 // src/pages/Register.tsx
 
 import { Link } from "react-router-dom";
-import React from "react";
+import React, { useState } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 
 const Register: React.FC = () => {
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+
+    //collect values from form
+    const userData = {
+      email,
+      password,
+    };
+
+    //send data to backend
+    try {
+      const response = await fetch("http://localhost:3000/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userData)
+      })
+
+      const result = await response.json();
+      console.log("Registering user...", result)
+
+    } catch (err) {
+      //  console.log("email", userData.email);
+      console.log("Something went wrong... registration failed", err)
+
+    }
+
+
+  };
+
   return (
     <section className="h-[calc(75vh)] w-full px-6 pt-16 font-adlam text-white">
       <div className="mx-auto flex flex-col items-center">
@@ -14,7 +46,9 @@ const Register: React.FC = () => {
             <h1 className="text-xl leading-tight tracking-tight text-[#01585e] md:text-2xl">
               Create an account
             </h1>
-            <form className="space-y-4 md:space-y-6" action="#">
+            <form
+              onSubmit={handleRegister}
+              className="space-y-4 md:space-y-6" action="#">
               <div>
                 <label
                   htmlFor="email"
@@ -29,6 +63,7 @@ const Register: React.FC = () => {
                   maxLength={50}
                   className="block w-full rounded-lg border bg-[#fcf8cf] p-2.5 text-sm text-[#01585e] placeholder-[#01685e] placeholder-opacity-30 outline-none"
                   placeholder="name@company.com"
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -46,6 +81,7 @@ const Register: React.FC = () => {
                   maxLength={50}
                   placeholder="••••••••"
                   className="block w-full rounded-lg border bg-[#fcf8cf] p-2.5 text-sm text-[#01585e] placeholder-[#01685e] placeholder-opacity-30 outline-none"
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
