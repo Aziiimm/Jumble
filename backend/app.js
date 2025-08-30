@@ -10,44 +10,48 @@ import cors from "cors";
 import { pool, dbOk } from "./db.js";
 const app = express();
 
-app.use(cors({
+app.use(
+  cors({
     origin: "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
-}));
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // Example route
 app.get("/", (req, res) => {
-    res.send("Hello from the app");
+  res.send("Welcome to jumble");
 });
 
 //test db connection: health check that pings Postgres
 app.get("/health", async (_req, res) => {
-    try {
-        res.json({ ok: await dbOk(), service: "jumble-backend" });
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e.message });
-    }
+  try {
+    res.json({ ok: await dbOk(), service: "jumble-backend" });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 //test db for inital setup
 app.get("/users", async (_req, res, next) => {
-    try {
-        const { rows } = await pool.query(
-            "SELECT id, email, created_at FROM users ORDER BY id LIMIT 50"
-        );
-        res.json(rows);
-    } catch (e) { next(e); }
+  try {
+    const { rows } = await pool.query(
+      "SELECT id, email, created_at FROM users ORDER BY id LIMIT 50"
+    );
+    res.json(rows);
+  } catch (e) {
+    next(e);
+  }
 });
 
 // Global error handler — for consistent error responses
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(err.status || 500).json({
-        success: false,
-        message: err.message || "Internal Server Error"
-    });
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
 });
 
 export default app;

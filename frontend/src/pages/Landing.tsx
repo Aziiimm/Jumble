@@ -35,7 +35,7 @@ const Landing: React.FC = () => {
         </div>
       </div>
 
-      <div className="mx-auto w-8/12 pb-12 pt-8 sm:pb-40 xl:pb-24 3xl:w-7/12">
+      <div className="mx-auto w-10/12 pb-12 pt-8 sm:w-8/12 sm:pb-40 xl:pb-24 3xl:w-7/12">
         <div className="flex flex-col items-center justify-center gap-8 font-adlam lg:flex-row xl:justify-between">
           {/* Game Selector */}
           <div className="mt-4 rounded-3xl bg-[#b1dfbc] px-8 shadow-2xl lg:w-7/12 2xl:px-16">
