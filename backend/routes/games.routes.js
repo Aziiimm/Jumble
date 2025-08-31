@@ -2,6 +2,7 @@
 import express from "express";
 import crypto from "crypto";
 import { generateBoard5x5 } from "../services/board.service.js";
+import { isValidPath, buildWord } from "../services/path.service.js";
 import {
   saveNewGame,
   loadBoard,
@@ -14,7 +15,6 @@ import {
   getPlayerNames,
   startGame,
 } from "../data/redisGameRepo.js";
-import { stat } from "fs";
 
 const router = express.Router();
 
@@ -171,6 +171,63 @@ router.post("/:id/start", async (req, res, next) => {
       status: s.status, // running
       startTs: s.startTs,
       durationSec: s.durationSec, // 80
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /games/:id/submit (MVP: path->word only, not scoring yet)
+router.post("/:id/submit", async (req, res, next) => {
+  try {
+    const gameId = req.params.id;
+    const { playerId, path } = req.body || {};
+
+    if (!gameId || !gameId.startsWith("g_")) {
+      return res.status(400).json({ message: "invalid gameId" });
+    }
+    if (!playerId || typeof playerId !== "string") {
+      return res.status(400).json({ message: "playerId is required" });
+    }
+    if (!Array.isArray(path) || path.length < 3) {
+      return res.status(400).json({
+        message: "path must be an array of [row,col] with length >= 3",
+      });
+    }
+
+    const [boardDoc, stateDoc] = await Promise.all([
+      loadBoard(gameId),
+      loadState(gameId),
+    ]);
+    if (!boardDoc || !stateDoc) {
+      return res.status(404).json({ message: "game not found or expired" });
+    }
+
+    // game must be running then
+    if (stateDoc.status !== "running") {
+      return res.status(409).json({
+        message: `cannot submit; game status is '${stateDoc.status}'`,
+      });
+    }
+
+    // check the timer
+    const now = Date.now();
+    const endTs = (stateDoc.startTs ?? 0) + (stateDoc.durationSec ?? 80) * 1000;
+    if (!stateDoc.startTs || now > endTs) {
+      return res.status(409).json({ message: "round is already over " });
+    }
+
+    // validate the path
+    const pathValid = isValidPath(boardDoc.board, path);
+    const word = pathValid ? buildWord(boardDoc.board, path) : "";
+
+    // response ( we arent scoring yet )
+    return res.status(200).json({
+      gameId,
+      playerId,
+      pathValid,
+      word,
+      timeLeftMs: Math.max(0, endTs - now),
     });
   } catch (err) {
     next(err);
