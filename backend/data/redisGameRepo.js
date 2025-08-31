@@ -76,3 +76,48 @@ export async function getScores(gameId) {
 
   return out;
 }
+
+export async function setPlayerName(gameId, playerId, displayName) {
+  await ensureRedis();
+  const key = `game:${gameId}:playerNames`;
+  if (typeof displayName === "string" && displayName.trim().length > 0) {
+    await redis.hSet(key, { [playerId]: displayName.trim() });
+    await redis.expire(key, DEFAULT_TTL);
+  }
+}
+
+export async function getPlayerNames(gameId) {
+  await ensureRedis();
+  const key = `game:${gameId}:playerNames`;
+  const hash = await redis.hGetAll(key); // return {} if missing
+  return hash;
+}
+
+export async function startGame(gameId) {
+  await ensureRedis();
+
+  const stateKey = `game:${gameId}:state`;
+
+  // ensure the game exists
+  const stateRaw = await redis.get(stateKey);
+  if (!stateRaw) return { ok: false, reason: "not_found" };
+
+  const state = JSON.parse(stateRaw); // { status, startTs, durationSec }
+
+  if (state.status === "running")
+    return { ok: false, reason: "already_running" };
+  if (state.status === "ending") return { ok: false, reason: "already_ended" };
+
+  // set start time and status
+  const now = Date.now();
+  state.status = "running";
+  state.startTs = now;
+
+  // preserve the remaining TTL if present, otherwise apply the default
+  let ttl = await redis.ttl(stateKey);
+  if (ttl < 0) ttl = DEFAULT_TTL; // -1/-2 means no ttl or missing, fallback
+
+  await redis.set(stateKey, JSON.stringify(state), { EX: ttl });
+
+  return { ok: true, state };
+}

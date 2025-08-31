@@ -10,6 +10,9 @@ import {
   initPlayerScore,
   listPlayers,
   getScores,
+  setPlayerName,
+  getPlayerNames,
+  startGame,
 } from "../data/redisGameRepo.js";
 import { stat } from "fs";
 
@@ -20,7 +23,7 @@ router.post("/", async (req, res, next) => {
   try {
     const duration = 80; // 80 second game duration
 
-    const gameId = "g_" + crypto.randomBytes(3).toString("hex"); // craeting a game id prefixed by g_
+    const gameId = "g_" + crypto.randomBytes(3).toString("hex"); // creating a game id prefixed by g_
     const board = generateBoard5x5();
     const state = await saveNewGame({ gameId, board, durationSec: duration }); // persist in redis
 
@@ -100,9 +103,14 @@ router.post("/:id/join", async (req, res, next) => {
     await addPlayer(gameId, playerId);
     await initPlayerScore(gameId, playerId);
 
+    if (name) {
+      await setPlayerName(gameId, playerId, name);
+    }
+
     // store player display name later, for now we're just gonna return it in the response
     const players = await listPlayers(gameId);
     const scores = await getScores(gameId);
+    const names = await getPlayerNames(gameId);
 
     return res.status(200).json({
       gameId,
@@ -110,9 +118,59 @@ router.post("/:id/join", async (req, res, next) => {
       name: name || null,
       players, // array of playerIds
       scores, // { playerId: number }
+      names, // { playerId: name }
       status: stateDoc.status,
       durationSec: stateDoc.durationSec,
       startTs: stateDoc.startTs,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /games/:id/start -> set status to 'running' and set the startTs
+router.post("/:id/start", async (req, res, next) => {
+  try {
+    const gameId = req.params.id;
+
+    if (!gameId || !gameId.startsWith("g_")) {
+      return res.status(400).json({ message: "invalid gameId" });
+    }
+
+    // make sure the game exists (there is a board and a game state)
+    const [boardDoc, stateDoc] = await Promise.all([
+      loadBoard(gameId),
+      loadState(gameId),
+    ]);
+    if (!boardDoc || !stateDoc) {
+      return res.status(404).json({ message: "game not found or expired" });
+    }
+    if (stateDoc.status === "running") {
+      return res.status(409).json({ message: "game is already running" });
+    }
+    if (stateDoc.status === "ended") {
+      return res.status(409).json({ message: "game has already ended" });
+    }
+
+    const result = await startGame(gameId);
+    if (!result.ok) {
+      if (result.reason === "not_found")
+        return res.status(404).json({ message: "game not found" });
+      if (result.reason === "already_running")
+        return res.status(409).json({ message: "game is already running" });
+      if (result.reason === "already_ended")
+        return res.status(409).json({ message: "game has already ended" });
+      return res.status(500).json({ message: "failed to start the game " });
+    }
+
+    // return updated state to the client
+    const s = result.state; // { status, startTs, durationSec }
+    return res.status(200).json({
+      gameId, // g_8934da
+      board: boardDoc.board,
+      status: s.status, // running
+      startTs: s.startTs,
+      durationSec: s.durationSec, // 80
     });
   } catch (err) {
     next(err);
