@@ -8,6 +8,9 @@
 import express from "express";
 import cors from "cors";
 import { pool, dbOk } from "./db.js";
+import { redisOk } from "./redis.js";
+import gamesRouter from "./routes/games.routes.js";
+
 const app = express();
 
 app.use(
@@ -17,6 +20,7 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.json());
 
 // Example route
@@ -33,6 +37,10 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+app.get("/health/redis", async (_req, res) => {
+  res.json({ ok: await redisOk(), service: "redis " });
+});
+
 //test db for inital setup
 app.get("/users", async (_req, res, next) => {
   try {
@@ -44,6 +52,8 @@ app.get("/users", async (_req, res, next) => {
     next(e);
   }
 });
+
+app.use("/games", gamesRouter);
 
 // Global error handler — for consistent error responses
 app.use((err, req, res, next) => {

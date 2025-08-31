@@ -14,8 +14,8 @@ Goal is to make a solid base for more games to be added later.
 
 ## To Dos:
 
+- [ ] Adjust Letter Frequency
 - [ ] Add Guest Account feature (cannot participate in multiplayer games)
-
 - [ ] Add Google Analytics
 
 ## Database Migrations Workflow
@@ -124,3 +124,10 @@ This will clear out the `users` table, then insert those test users.
 #### Workflow
 
 We both can just run `npm run seed:run` after pulling new changes with updates to the schema (new migrations) to get the same test data.
+
+## Backend Folder Structure
+
+`/routes` for express route files ()
+`/services` for game logic helpers (such as board generation)
+`/data` for data access (for Redis/Postgres repos)
+`/docs` docs (redis-keys.md, api-contract.md)
