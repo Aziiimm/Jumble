@@ -18,7 +18,7 @@ Goal is to make a solid base for more games to be added later.
 
 - [ ] Add Google Analytics
 
-## Database migrations workflow
+## Database Migrations Workflow
 
 `npm run migrate:rollback`
 
@@ -63,7 +63,7 @@ export async function down(knex) {
 
 If you need to change something (like renaming or dropping a column), **create a new migration** instead of editing the old one, so we can keep a clear history of everything, and so we can both just run `npm run migrate:latest` after pulling and keep our schemas in sync. Lets say you want to just add a column, instead of editing the migration, just make a new one with that instruction.
 
-````npm run migrate:make add_username_to_users.js`
+`npm run migrate:make add_username_to_users.js`
 
 ```
 // /migrations/..._add_usernmame_to_users.js
