@@ -9,6 +9,8 @@ const Register: React.FC = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
 

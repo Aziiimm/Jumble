@@ -1,9 +1,49 @@
 // src/pages/Login.tsx
 
 import { Link } from "react-router-dom";
-import React from "react";
+import React, { useState } from "react";
+
+
 
 const Login: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+
+    const userData = {
+      email,
+      password,
+    };
+
+    try {
+      const response = await fetch("http://localhost:3000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", //allows cookies to send/recieve
+        body: JSON.stringify(userData)
+      })
+
+      const result = await response.json();
+      console.log("login response:", result);
+
+      if (result.ok === true) {
+        // redirect to dashboard/lobby
+        //   window.location.href = "/dashboard";
+        console.log("login successful!\n")
+        console.log("user: ", userData.email)
+      } else {
+        alert(result.message || "Login failed");
+      }
+
+    } catch (err) {
+      console.error("Something went wrong during login:", err);
+      alert("An error occurred. Please try again.");
+
+    }
+  }
+
   return (
     <section className="h-[calc(70vh)] w-full px-6 pt-16 font-adlam text-white">
       <div className="flex flex-col items-center">
@@ -12,7 +52,8 @@ const Login: React.FC = () => {
             <h1 className="text-xl leading-tight tracking-tight text-[#01685e] md:text-2xl">
               Login
             </h1>
-            <form className="space-y-4 md:space-y-6" action="#">
+            <form onSubmit={handleLogin}
+              className="space-y-4 md:space-y-6" action="#">
               <div>
                 <label
                   htmlFor="email"
@@ -26,6 +67,7 @@ const Login: React.FC = () => {
                   id="email"
                   className="block w-full rounded-lg border border-gray-300 bg-[#fcf8cf] p-2.5 text-sm text-[#01685e] placeholder-[#01685e] placeholder-opacity-30 outline-none"
                   placeholder="name@company.com"
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -42,6 +84,7 @@ const Login: React.FC = () => {
                   id="password"
                   placeholder="••••••••"
                   className="block w-full rounded-lg border border-gray-300 bg-[#fcf8cf] p-2.5 text-sm text-[#01685e] placeholder-[#01685e] placeholder-opacity-30 outline-none"
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
