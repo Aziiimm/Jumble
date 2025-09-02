@@ -5,6 +5,7 @@ import { generateBoard5x5 } from "../services/board.service.js";
 import { isValidPath, buildWord } from "../services/path.service.js";
 import { isValidWord as dictIsValid } from "../services/dictionary.service.js";
 import { scoreWordByLength } from "../services/scoring.service.js";
+import { saveFinishedGame } from "../data/pgGameRepo.js";
 import {
   saveNewGame,
   loadBoard,
@@ -58,6 +59,16 @@ router.get("/:id/state", async (req, res, next) => {
 
     const boardDoc = await loadBoard(gameId);
     const stateDoc = await loadState(gameId);
+
+    const now = Date.now();
+    const endTs = (stateDoc.startTs ?? 0) + (stateDoc.durationSec ?? 80) * 1000;
+    if (stateDoc.status === "running" && stateDoc.startTs && now >= endTs) {
+      try {
+        await finishGame(gameId);
+      } catch {}
+      const s2 = await loadState(gameId);
+      if (s2) (stateDoc.status = s2.status), (stateDoc.endTs = s2.endTs);
+    }
 
     if (!boardDoc || !stateDoc) {
       return res
@@ -309,6 +320,7 @@ router.post("/:id/finish", async (req, res, next) => {
       return res.status(400).json({ message: "invalid gameId " });
     }
 
+    // load current board to check state
     const [boardDoc, stateDoc] = await Promise.all([
       loadBoard(gameId),
       loadState(gameId),
@@ -317,8 +329,27 @@ router.post("/:id/finish", async (req, res, next) => {
       return res.status(404).json({ message: "game not found or expired" });
     }
 
+    // game already ended
     if (stateDoc.status === "ended") {
       return res.status(409).json({ message: "game already ended" });
+    }
+
+    // game must have started
+    if (!stateDoc.startTs || stateDoc.status !== "running") {
+      return res.status(409).json({
+        message: `cannot finish; game status is '${stateDoc.status}'`,
+      });
+    }
+
+    // time check
+    const now = Date.now();
+    const endTs = (stateDoc.startTs ?? 0) + (stateDoc.durationSec ?? 80) * 1000;
+
+    if (now < endTs) {
+      return res.status(409).json({
+        message: "too early to finish",
+        msUntilEnd: endTs - now,
+      });
     }
 
     const fin = await finishGame(gameId);
@@ -335,6 +366,16 @@ router.post("/:id/finish", async (req, res, next) => {
       getScores(gameId),
       getPlayerNames(gameId),
     ]);
+
+    await saveFinishedGame({
+      gameId,
+      startTs: fin.state.startTs ?? stateDoc.startTs ?? null,
+      endTs: fin.state.endTs ?? Date.now(),
+      durationSec: fin.state.durationSec,
+      board: boardDoc.board,
+      scores,
+      names,
+    });
 
     return res.status(200).json({
       gameId,
