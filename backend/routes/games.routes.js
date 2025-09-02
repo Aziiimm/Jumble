@@ -19,6 +19,7 @@ import {
   hasSubmittedWord,
   addSubmittedWord,
   incrementPlayerScore,
+  finishGame,
 } from "../data/redisGameRepo.js";
 
 const router = express.Router();
@@ -293,6 +294,58 @@ router.post("/:id/submit", async (req, res, next) => {
       newScore,
       scores,
       timeLeftMs: Math.max(0, endTs - now),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /games/:id/finish -> set game state to finished and return final stats
+router.post("/:id/finish", async (req, res, next) => {
+  try {
+    const gameId = req.params.id;
+
+    if (!gameId || !gameId.startsWith("g_")) {
+      return res.status(400).json({ message: "invalid gameId " });
+    }
+
+    const [boardDoc, stateDoc] = await Promise.all([
+      loadBoard(gameId),
+      loadState(gameId),
+    ]);
+    if (!boardDoc || !stateDoc) {
+      return res.status(404).json({ message: "game not found or expired" });
+    }
+
+    if (stateDoc.status === "ended") {
+      return res.status(409).json({ message: "game already ended" });
+    }
+
+    const fin = await finishGame(gameId);
+    if (!fin.ok) {
+      if (fin.reason === "not_found")
+        return res.status(404).json({ message: "game not found" });
+      if (fin.reason === "already_ended")
+        return res.status(409).json({ message: "game already ended" });
+      return res.status(500).json({ message: "failed to finish game" });
+    }
+
+    const [players, scores, names] = await Promise.all([
+      listPlayers(gameId),
+      getScores(gameId),
+      getPlayerNames(gameId),
+    ]);
+
+    return res.status(200).json({
+      gameId,
+      board: boardDoc.board,
+      status: fin.state.status, // should be "ended"
+      startTs: fin.state.startTs ?? stateDoc.startTs ?? null,
+      endTs: fin.state.endTs ?? null,
+      durationSec: fin.state.durationSec,
+      players,
+      names,
+      scores,
     });
   } catch (err) {
     next(err);

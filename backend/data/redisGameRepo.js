@@ -152,3 +152,26 @@ export async function incrementPlayerScore(gameId, playerId, score) {
   const newScore = await redis.hIncrBy(key, playerId, Number(score) || 0);
   return Number(newScore);
 }
+
+// finish a game
+export async function finishGame(gameId) {
+  await ensureRedis();
+  const stateKey = `game:${gameId}:state`;
+
+  const raw = await redis.get(stateKey);
+  if (!raw) return { ok: false, reason: "not_found" };
+
+  const state = JSON.parse(raw); // { status, startTs, durationSec }
+  if (state.status === "ended") return { ok: false, reason: "already_ended" };
+
+  state.status = "ended";
+  state.endTs = Date.now();
+
+  // keep existing TTL
+  let ttl = await redis.ttl(stateKey);
+  if (ttl < 0) ttl = DEFAULT_TTL;
+
+  await redis.set(stateKey, JSON.stringify(state), { EX: ttl });
+
+  return { ok: true, state };
+}
