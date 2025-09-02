@@ -10,6 +10,7 @@ import cors from "cors";
 import { pool, dbOk } from "./db.js";
 import { redisOk } from "./redis.js";
 import gamesRouter from "./routes/games.routes.js";
+import { dictStats, initDictionary } from "./services/dictionary.service.js";
 
 const app = express();
 
@@ -39,6 +40,20 @@ app.get("/health", async (_req, res) => {
 
 app.get("/health/redis", async (_req, res) => {
   res.json({ ok: await redisOk(), service: "redis " });
+});
+
+// load dictionary once during app boot
+initDictionary().catch((e) => {
+  console.error("[dict] init failed:", e);
+});
+
+app.get("/health/dictionary", async (_req, res) => {
+  try {
+    const stats = await dictStats();
+    res.json({ ok: stats.loaded, ...stats });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 //test db for inital setup

@@ -3,6 +3,8 @@ import express from "express";
 import crypto from "crypto";
 import { generateBoard5x5 } from "../services/board.service.js";
 import { isValidPath, buildWord } from "../services/path.service.js";
+import { isValidWord as dictIsValid } from "../services/dictionary.service.js";
+import { scoreWordByLength } from "../services/scoring.service.js";
 import {
   saveNewGame,
   loadBoard,
@@ -14,6 +16,9 @@ import {
   setPlayerName,
   getPlayerNames,
   startGame,
+  hasSubmittedWord,
+  addSubmittedWord,
+  incrementPlayerScore,
 } from "../data/redisGameRepo.js";
 
 const router = express.Router();
@@ -21,7 +26,7 @@ const router = express.Router();
 // POST /games  -> create a game session
 router.post("/", async (req, res, next) => {
   try {
-    const duration = 80; // 80 second game duration
+    const duration = 300; // 5 min game duration GONNA CHANGE TO 80 SECONDS LATER
 
     const gameId = "g_" + crypto.randomBytes(3).toString("hex"); // creating a game id prefixed by g_
     const board = generateBoard5x5();
@@ -177,7 +182,7 @@ router.post("/:id/start", async (req, res, next) => {
   }
 });
 
-// POST /games/:id/submit (MVP: path->word only, not scoring yet)
+// POST /games/:id/submit (path->word, check dictionary, dedupe, update score)
 router.post("/:id/submit", async (req, res, next) => {
   try {
     const gameId = req.params.id;
@@ -219,14 +224,74 @@ router.post("/:id/submit", async (req, res, next) => {
 
     // validate the path
     const pathValid = isValidPath(boardDoc.board, path);
-    const word = pathValid ? buildWord(boardDoc.board, path) : "";
+    if (!pathValid) {
+      return res.status(200).json({
+        gameId,
+        playerId,
+        accepted: false,
+        reason: "invalid_path",
+        word: "",
+        points: 0,
+        timeLeftMs: Math.max(0, endTs - now),
+      });
+    }
+    const word = buildWord(boardDoc.board, path);
 
-    // response ( we arent scoring yet )
+    // dictionary check
+    if (!(await dictIsValid(word))) {
+      return res.status(200).json({
+        gameId,
+        playerId,
+        accepted: false,
+        reason: "not_in_dictionary",
+        word,
+        points: 0,
+        timeLeftMs: Math.max(0, endTs - now),
+      });
+    }
+
+    // dedupe check
+    const already = await hasSubmittedWord(gameId, playerId, word);
+    if (already) {
+      const scores = await getScores(gameId);
+      return res.status(200).json({
+        gameId,
+        playerId,
+        accepted: false,
+        reason: "duplicate_word",
+        word,
+        points: 0,
+        scores,
+        timeLeftMs: Math.max(0, endTs - now),
+      });
+    }
+
+    // score update
+    const points = scoreWordByLength(word);
+    if (points <= 0) {
+      return res.status(200).json({
+        gameId,
+        playerId,
+        accepted: false,
+        reason: "too_short",
+        word,
+        points: 0,
+        timeLeftMs: Math.max(0, endTs - now),
+      });
+    }
+
+    await addSubmittedWord(gameId, playerId, word);
+    const newScore = await incrementPlayerScore(gameId, playerId, points);
+    const scores = await getScores(gameId);
+
     return res.status(200).json({
       gameId,
       playerId,
-      pathValid,
+      accepted: true,
       word,
+      points,
+      newScore,
+      scores,
       timeLeftMs: Math.max(0, endTs - now),
     });
   } catch (err) {

@@ -1,7 +1,7 @@
 // data/redisGameRepo.js
 import { redis, ensureRedis } from "../redis.js";
 
-const DEFAULT_TTL = Number(180); // 3 minutes
+const DEFAULT_TTL = Number(7200); // 2 hours WILL CHANGE LATER TO 3 MINUTES
 
 export async function saveNewGame({ gameId, board, durationSec }) {
   await ensureRedis();
@@ -120,4 +120,35 @@ export async function startGame(gameId) {
   await redis.set(stateKey, JSON.stringify(state), { EX: ttl });
 
   return { ok: true, state };
+}
+
+// prevent duplicate scoring of the same word by a single player
+export async function hasSubmittedWord(gameId, playerId, word) {
+  await ensureRedis();
+  const key = `game:${gameId}:submissions:${playerId}`;
+
+  // if set not exists, sIsMember return 0
+  const exists = await redis.sIsMember(key, word.toLowerCase());
+  return exists === 1 || exists === true;
+}
+
+export async function addSubmittedWord(gameId, playerId, word) {
+  await ensureRedis();
+  const key = `game:${gameId}:submissions:${playerId}`;
+  await redis.sAdd(key, word.toLowerCase());
+  await redis.expire(key, DEFAULT_TTL);
+}
+
+export async function incrementPlayerScore(gameId, playerId, score) {
+  await ensureRedis();
+  const key = `game:${gameId}:scores`;
+  // make sure the field exists, init if not
+  const exists = await redis.hExists(key, playerId);
+  if (!exists) {
+    await redis.hSet(key, { [playerId]: 0 });
+    await redis.expire(key, DEFAULT_TTL);
+  }
+
+  const newScore = await redis.hIncrBy(key, playerId, Number(score) || 0);
+  return Number(newScore);
 }
