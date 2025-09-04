@@ -93,3 +93,53 @@ export async function countLobbyMembers(roomCode) {
   const { members } = lobbyKeys(roomCode);
   return await redis.sCard(members);
 }
+
+export async function closeLobby(roomCode) {
+  await ensureRedis();
+  const { state } = lobbyKeys(roomCode);
+  const raw = await redis.get(state);
+  if (!raw) return { ok: false, reason: "not_found" };
+  const doc = JSON.parse(raw);
+  if (doc.status === "closed") return { ok: true, state: doc };
+
+  doc.status = "closed";
+  let ttl = await redis.ttl(state);
+  if (ttl < 0) ttl = LOBBY_TTL;
+  await redis.set(state, JSON.stringify(doc), { EX: ttl });
+  return { ok: true, state: doc };
+}
+
+export async function setLobbyGame(roomCode, gameId) {
+  await ensureRedis();
+  const key = `lobby:${roomCode}:gameId`;
+  await redis.set(key, gameId, { EX: LOBBY_TTL });
+}
+
+export async function getLobbyGame(roomCode) {
+  await ensureRedis();
+  const key = `lobby:${roomCode}:gameId`;
+  return await redis.get(key);
+}
+
+// remap game to room code so lobby can restart postgame
+export async function setGameLobby(gameId, roomCode) {
+  await ensureRedis();
+  const key = `game:${gameId}:roomCode`;
+  await redis.set(key, roomCode, { EX: LOBBY_TTL });
+}
+
+// reopens lobby postgame so players can just rejoin
+export async function openLobby(roomCode) {
+  await ensureRedis();
+  const { state } = lobbyKeys(roomCode);
+  const raw = await redis.get(state);
+  if (!raw) return { ok: false, reason: "not_found" };
+  const doc = JSON.parse(raw);
+  if (doc.status === "open") return { ok: true, state: doc };
+
+  doc.status = "open";
+  let ttl = await redis.ttl(state);
+  if (ttl < 0) ttl = LOBBY_TTL;
+  await redis.set(state, JSON.stringify(doc), { EX: ttl });
+  return { ok: true, state: doc };
+}
