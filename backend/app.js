@@ -11,6 +11,7 @@ import { pool, dbOk } from "./db.js";
 import { redisOk } from "./redis.js";
 import gamesRouter from "./routes/games.routes.js";
 import { dictStats, initDictionary } from "./services/dictionary.service.js";
+import lobbiesRouter from "./routes/lobbies.routes.js";
 
 const app = express();
 
@@ -69,6 +70,7 @@ app.get("/users", async (_req, res, next) => {
 });
 
 app.use("/games", gamesRouter);
+app.use("/lobbies", lobbiesRouter);
 
 // Global error handler — for consistent error responses
 app.use((err, req, res, next) => {
