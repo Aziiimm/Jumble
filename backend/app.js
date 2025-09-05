@@ -12,6 +12,7 @@ import { redisOk } from "./redis.js";
 import gamesRouter from "./routes/games.routes.js";
 import { dictStats, initDictionary } from "./services/dictionary.service.js";
 import lobbiesRouter from "./routes/lobbies.routes.js";
+import { getIO } from "./realtime/sockets.js";
 
 const app = express();
 
@@ -48,6 +49,7 @@ initDictionary().catch((e) => {
   console.error("[dict] init failed:", e);
 });
 
+// test dict connection: health check that dict is loaded
 app.get("/health/dictionary", async (_req, res) => {
   try {
     const stats = await dictStats();
@@ -55,6 +57,12 @@ app.get("/health/dictionary", async (_req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// test WS connection: confirms the server started without opening client
+app.get("/health/ws", (_req, res) => {
+  const io = getIO();
+  res.json({ ok: Boolean(io), service: "socket.io" });
 });
 
 //test db for inital setup

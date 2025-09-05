@@ -24,6 +24,7 @@ import {
   finishGame,
 } from "../data/redisGameRepo.js";
 import { openLobby } from "../data/redisLobbyRepo.js";
+import { emitToLobby, emitToGame } from "../realtime/sockets.js";
 
 const router = express.Router();
 
@@ -170,6 +171,14 @@ router.post("/:id/submit", async (req, res, next) => {
     const newScore = await incrementPlayerScore(gameId, playerId, points);
     const scores = await getScores(gameId);
 
+    emitToGame(gameId, "game:score", {
+      gameId,
+      playerId,
+      word,
+      points,
+      scores, // full scoreboard after the increment
+    });
+
     return res.status(200).json({
       gameId,
       playerId,
@@ -257,6 +266,23 @@ router.post("/:id/finish", async (req, res, next) => {
         await openLobby(roomCode);
       }
     } catch (e) {}
+
+    // broadcast to the room
+    emitToGame(gameId, "game:ended", {
+      gameId,
+      endTs: fin.state.endTs ?? Date.now(),
+      scores,
+      names,
+    });
+
+    // if there was a room code, tell the lobby its open again
+    // lobby has already reopened in Redis, this just tells the client instantly
+    try {
+      const roomCode = await redis.get(`game:${gameId}:roomCode`);
+      if (roomCode) {
+        emitToLobby(roomCode, "lobby:reopened", { roomCode });
+      }
+    } catch {}
 
     return res.status(200).json({
       gameId,

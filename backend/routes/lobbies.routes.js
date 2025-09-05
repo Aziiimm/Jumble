@@ -23,7 +23,9 @@ import {
   setPlayerName,
   getPlayerNames,
   getScores,
+  loadState,
 } from "../data/redisGameRepo.js";
+import { emitToLobby, emitToGame } from "../realtime/sockets.js";
 
 const router = express.Router();
 
@@ -107,6 +109,15 @@ router.post("/:code/join", async (req, res, next) => {
         return res.status(404).json({ message: "lobby is closed" });
       return res.status(500).json({ message: "failed to join lobby" });
     }
+
+    // broadcast updated lobby snapshot to everyone in the lobby room
+    emitToLobby(roomCode, "lobby:update", {
+      roomCode,
+      status: result.state.status, // open
+      ownerId: result.state.ownerId,
+      members: result.members,
+      names: result.names,
+    });
 
     return res.status(200).json({
       roomCode,
@@ -205,6 +216,25 @@ router.post("/:code/start", async (req, res, next) => {
 
     const scores = await getScores(gameId);
     const names = await getPlayerNames(gameId);
+
+    // notify the game room that game has started (clients will join game:<id>)
+    const stateDoc = await loadState(gameId); // to get startTs/duration
+    const startPayload = {
+      gameId,
+      board,
+      players: lobby.members,
+      names,
+      scores,
+      startTs: stateDoc?.startTs ?? Date.now(),
+      durationSec: stateDoc?.durationSec ?? 80,
+    };
+
+    // notify lobby that its closing & which game to navigate to
+    emitToLobby(roomCode, "lobby:closed", { roomCode, gameId });
+    // also send game:started to lobby so they can see start info immediately
+    emitToLobby(roomCode, "game:started", startPayload);
+    // notify anyone already in the game room
+    emitToGame(gameId, "game:started", startPayload);
 
     return res.status(201).json({
       roomCode,
