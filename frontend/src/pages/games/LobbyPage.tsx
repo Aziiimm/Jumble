@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useLobbySocket } from "@/hooks/useLobbySocket";
+import { Spinner } from "@/components/ui/spinner";
+import { FaCrown, FaUser } from "react-icons/fa6";
 
 export default function LobbyPage() {
   const { code } = useParams<{ code: string }>(); // route like /lobby/:code
@@ -49,41 +51,34 @@ export default function LobbyPage() {
 
   if (!snapshot) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Loading Lobby...</h1>
-          <p className="text-gray-600">Room Code: {code}</p>
+      <div className="flex h-screen items-center justify-center font-adlam text-white">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <Spinner />
+          <div className="flex flex-col items-center text-center">
+            <h1 className="text-3xl">Loading Lobby...</h1>
+            <p className="text-lg">Room Code: {code}</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 p-6">
+    <div className="min-h-screen p-6 font-adlam text-white">
       <div className="mx-auto max-w-2xl">
         {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-white">Lobby</h1>
-          <p className="text-xl text-blue-200">Room Code: {code}</p>
-          <p className="text-lg text-gray-300">
-            Status: {snapshot.status || "Waiting for players..."}
-          </p>
-        </div>
+        <p className="mb-2 text-3xl">Room Code: {code}</p>
 
         {/* Players List */}
-        <div className="mb-8 rounded-2xl bg-white/10 p-6 backdrop-blur-sm">
-          <h2 className="mb-4 text-2xl font-semibold text-white">
+        <div className="mb-8 rounded-2xl bg-[#01685e] p-6">
+          <h2 className="mb-4 text-2xl">
             Players ({snapshot.members?.length || 0}/8)
           </h2>
           <div className="space-y-3">
             {snapshot.members?.map((id) => (
               <div
                 key={id}
-                className={`flex items-center rounded-lg p-3 ${
-                  id === playerId
-                    ? "border-2 border-green-400 bg-green-500/20"
-                    : "bg-white/10"
-                }`}
+                className={`flex items-center rounded-lg bg-white/10 p-3`}
               >
                 <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold text-white">
                   {snapshot.names?.[id]?.charAt(0) || id.charAt(0)}
@@ -92,13 +87,15 @@ export default function LobbyPage() {
                   <p className="font-medium text-white">
                     {snapshot.names?.[id] || id}
                   </p>
-                  {id === playerId && (
-                    <p className="text-sm text-green-300">(You)</p>
-                  )}
                 </div>
                 {id === snapshot.ownerId && (
-                  <span className="rounded-full bg-yellow-500 px-3 py-1 text-xs font-bold text-yellow-900">
-                    Owner
+                  <span className="rounded-full bg-yellow-500 px-1 py-1 text-yellow-900">
+                    <FaCrown />
+                  </span>
+                )}
+                {id !== snapshot.ownerId && id === playerId && (
+                  <span className="rounded-full bg-green-300 px-1 py-1 text-gray-900">
+                    <FaUser />
                   </span>
                 )}
               </div>
@@ -111,15 +108,13 @@ export default function LobbyPage() {
           <div className="text-center">
             <button
               onClick={handleStartGame}
-              disabled={isStarting || (snapshot.members?.length || 0) < 1}
-              className="rounded-xl bg-green-600 px-8 py-4 text-xl font-bold text-white transition-all hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-500"
+              disabled={isStarting || (snapshot.members?.length || 0) < 2}
+              className="rounded-xl bg-[#01685e] px-8 py-4 text-xl text-white transition-all hover:bg-[#014d47] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isStarting ? "Starting Game..." : "Start Game"}
             </button>
-            {(snapshot.members?.length || 0) < 1 && (
-              <p className="mt-2 text-sm text-yellow-300">
-                Need at least 1 player to start
-              </p>
+            {(snapshot.members?.length || 0) < 2 && (
+              <p className="mt-2 text-lg">Need 2 Players to Start</p>
             )}
           </div>
         )}
@@ -127,9 +122,7 @@ export default function LobbyPage() {
         {/* Non-owner message */}
         {!isOwner && (
           <div className="text-center">
-            <p className="text-lg text-gray-300">
-              Waiting for the owner to start the game...
-            </p>
+            <p className="text-lg">Waiting for Lobby to Start...</p>
           </div>
         )}
       </div>

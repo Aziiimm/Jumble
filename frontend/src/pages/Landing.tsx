@@ -1,7 +1,7 @@
 // src/pages/Landing.tsx
 
 import React, { useState } from "react";
-import { Switch } from "@/components/ui/switch";
+// import { Switch } from "@/components/ui/switch";
 import { Link, useNavigate } from "react-router-dom";
 
 import banner from "../assets/images/jumble_banner.png";
@@ -117,7 +117,7 @@ const Landing: React.FC = () => {
                 <div
                   key={game.id}
                   onClick={() => setSelectedGame(game.id)}
-                  className={`flex cursor-pointer flex-col items-center rounded-lg border p-2 shadow-md transition duration-150 ease-in-out hover:shadow-lg sm:px-2 sm:py-4 lg:px-0 ${
+                  className={`flex cursor-pointer flex-col items-center rounded-lg p-2 shadow-xl transition duration-150 ease-in-out sm:px-2 sm:py-4 lg:px-0 ${
                     selectedGame === game.id
                       ? "bg-[#01685e] text-white"
                       : "bg-[#fcf8cf]"
@@ -134,15 +134,17 @@ const Landing: React.FC = () => {
                 </div>
               ))}
             </div>
+
             <div className="pb-10">
-              <div className="mt-6 flex w-full justify-between px-4">
+              {/* Play Solo FEATURE FOR THE FUTURE*/}
+              {/* <div className="mt-6 flex w-full justify-between px-4">
                 <label>Play Solo</label>
                 <Switch />
               </div>
               <div className="mt-2 w-full px-4 text-xs font-light text-gray-600 hover:cursor-default sm:text-base">
                 You will be matched against an AI player. No account necessary!
-              </div>
-              <div className="mt-4 flex w-full justify-center px-4">
+              </div> */}
+              <div className="mt-4 flex w-full justify-center">
                 <button
                   onClick={handleCreateLobby}
                   disabled={isCreatingLobby}
