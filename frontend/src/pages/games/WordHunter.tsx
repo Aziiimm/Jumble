@@ -9,6 +9,7 @@ import { isValidWord } from "@/utils/gameUtils";
 
 import { MdPeopleAlt } from "react-icons/md";
 import { FaTrophy } from "react-icons/fa";
+import { Spinner } from "@/components/ui/spinner";
 
 const dog =
   "https://www.nylabone.com/-/media/project/oneweb/nylabone/images/dog101/10-intelligent-dog-breeds/golden-retriever-tongue-out.jpg?h=430&w=710&hash=7FEB820D235A44B76B271060E03572C7";
@@ -50,7 +51,6 @@ const WordHunter: React.FC = () => {
       navigate(`/lobby/${reopenedRoomCode}`);
     },
   });
-
   const { started: gameStarted, scores } = useGameSocket(gameId, {
     onEnded: onGameEnded,
   });
@@ -311,7 +311,17 @@ const WordHunter: React.FC = () => {
 
   // Don't render until board is generated
   if (board.length === 0) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center font-adlam text-white">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <Spinner />
+          <div className="flex flex-col items-center text-center">
+            <h1 className="text-3xl">Loading Game...</h1>
+            <p className="text-lg">Room Code: {roomCodeLabel}</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -443,13 +453,25 @@ const WordHunter: React.FC = () => {
                     >
                       <path
                         d={generateTrailPath()}
-                        stroke="#ff6b6b"
+                        stroke={
+                          wordStatus === "success"
+                            ? "#4ade80" // Green for valid words
+                            : wordStatus === "duplicate"
+                              ? "#fbbf24" // Yellow for duplicate words
+                              : "#ff6b6b" // Red for invalid words
+                        }
                         strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         fill="none"
                         opacity="0.9"
-                        filter="drop-shadow(0 0 4px rgba(255, 107, 107, 0.5))"
+                        filter={
+                          wordStatus === "success"
+                            ? "drop-shadow(0 0 4px rgba(74, 222, 128, 0.5))" // Green glow
+                            : wordStatus === "duplicate"
+                              ? "drop-shadow(0 0 4px rgba(251, 191, 36, 0.5))" // Yellow glow
+                              : "drop-shadow(0 0 4px rgba(255, 107, 107, 0.5))" // Red glow
+                        }
                       />
                     </svg>
                   )}
@@ -463,7 +485,11 @@ const WordHunter: React.FC = () => {
                           data-col={colIndex}
                           className={`relative flex h-[3.5rem] w-[3.5rem] cursor-pointer items-center justify-center rounded-xl text-2xl font-bold shadow-2xl transition-all duration-200 sm:h-[5rem] sm:w-[5rem] md:h-[5.5rem] md:w-[5.5rem] lg:h-[4.5rem] lg:w-[4.5rem] xl:h-20 xl:w-20 ${
                             isTileSelected(rowIndex, colIndex)
-                              ? "bg-[#ff6b6b] text-white shadow-lg"
+                              ? wordStatus === "success"
+                                ? "bg-[#4ade80] text-white shadow-lg" // Green for valid words
+                                : wordStatus === "duplicate"
+                                  ? "bg-[#fbbf24] text-white shadow-lg" // Yellow for duplicate words
+                                  : "bg-[#ff6b6b] text-white shadow-lg" // Red for invalid words
                               : "bg-[#fcf8cf] text-[#876124] hover:bg-[#f0e68c]"
                           }`}
                           onMouseDown={() =>
