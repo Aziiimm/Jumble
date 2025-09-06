@@ -24,6 +24,7 @@ import {
   getPlayerNames,
   getScores,
   loadState,
+  finishGame,
 } from "../data/redisGameRepo.js";
 import { emitToLobby, emitToGame } from "../realtime/sockets.js";
 
@@ -241,6 +242,26 @@ router.post("/:code/start", async (req, res, next) => {
     emitToLobby(roomCode, "game:started", startPayload);
     // notify anyone already in the game room
     emitToGame(gameId, "game:started", startPayload);
+
+    // Set up auto-finish timer
+    const durationMs = startPayload.durationSec * 1000;
+    setTimeout(async () => {
+      try {
+        console.log(
+          `Auto-finishing game ${gameId} after ${startPayload.durationSec}s`
+        );
+
+        // Finish the game
+        await finishGame(gameId);
+
+        // Notify all players that the game has ended
+        emitToGame(gameId, "game:ended", { gameId });
+
+        console.log(`Game ${gameId} auto-finished successfully`);
+      } catch (error) {
+        console.error(`Error auto-finishing game ${gameId}:`, error);
+      }
+    }, durationMs);
 
     return res.status(201).json({
       roomCode,
