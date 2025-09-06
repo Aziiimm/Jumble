@@ -14,6 +14,9 @@ Goal is to make a solid base for more games to be added later.
 
 ## To Dos:
 
+- [ ] Leaderboards functionality (routes + frontend page, increment winner's win count on game end)
+- [ ] Make the lobby page look nice according to the rest of the app
+- [ ] Fix the game selection UI in the landing page
 - [ ] Adjust Letter Frequency
 - [ ] When auth is implemented, change routes to use req.user.{id, etc as necessary} from middleware
 - [ ] Add Guest Account feature (cannot participate in multiplayer games)
