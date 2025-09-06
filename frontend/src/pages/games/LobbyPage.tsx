@@ -67,7 +67,7 @@ export default function LobbyPage() {
     <div className="min-h-screen p-6 font-adlam text-white">
       <div className="mx-auto max-w-2xl">
         {/* Header */}
-        <p className="mb-2 text-3xl">Room Code: {code}</p>
+        <p className="mb-2 place-self-center text-3xl">Room Code: {code}</p>
 
         {/* Players List */}
         <div className="mb-8 rounded-2xl bg-[#01685e] p-6">
@@ -94,7 +94,7 @@ export default function LobbyPage() {
                   </span>
                 )}
                 {id !== snapshot.ownerId && id === playerId && (
-                  <span className="rounded-full bg-green-300 px-1 py-1 text-gray-900">
+                  <span className="rounded-full bg-green-300 px-1 py-1 text-green-900">
                     <FaUser />
                   </span>
                 )}

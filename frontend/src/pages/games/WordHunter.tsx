@@ -8,7 +8,7 @@ import { submitWord } from "@/services/api";
 import { isValidWord } from "@/utils/gameUtils";
 
 import { MdPeopleAlt } from "react-icons/md";
-import { FaTrophy } from "react-icons/fa";
+import { FaTrophy, FaHourglassHalf } from "react-icons/fa";
 import { Spinner } from "@/components/ui/spinner";
 
 const dog =
@@ -325,16 +325,11 @@ const WordHunter: React.FC = () => {
   }
 
   return (
-    <div className="px-6 pb-20 pt-10 font-adlam text-[#FCF8CF]">
+    <div className="px-6 pb-20 font-adlam text-[#FCF8CF] sm:pt-10">
       <div className="mx-auto w-full sm:w-10/12 lg:w-11/12 2xl:w-10/12 3xl:w-9/12">
-        {/* Game Header */}
-        <div className="mb-6 text-center">
-          <h1 className="text-4xl">Word Hunter</h1>
-        </div>
-
         {showEnded && (
-          <div className="mb-4 rounded-lg bg-yellow-500/20 p-3 text-center text-yellow-100">
-            Round over!
+          <div className="mb-4 min-w-fit items-center place-self-center rounded-lg bg-[#01685e]/80 p-3 text-yellow-100">
+            Round Over!
             {isOwner && (
               <button
                 className="ml-4 rounded-md bg-yellow-400 px-3 py-1 text-[#876124] hover:bg-yellow-300"
@@ -364,10 +359,10 @@ const WordHunter: React.FC = () => {
           </div>
         )}
 
-        {/* Current Word Display and Timer */}
-        <div className="mb-6 flex items-center justify-center gap-4">
+        {/* Current Word Display */}
+        <div className="flex flex-col items-center justify-center gap-2 lg:mb-4">
           <div
-            className={`inline-block flex min-h-[2.5rem] min-w-[6rem] items-center justify-center rounded-lg px-6 transition-all duration-150 ${
+            className={`inline-block flex min-h-[2.5rem] min-w-[8rem] items-center justify-center rounded-lg px-6 transition-all duration-150 ${
               wordStatus === "success"
                 ? "scale-105 bg-green-500 shadow-lg"
                 : wordStatus === "duplicate"
@@ -379,9 +374,19 @@ const WordHunter: React.FC = () => {
           </div>
 
           {/* Timer */}
-          <div className="flex items-center gap-2 rounded-lg bg-[#01685E] px-4 py-2">
-            <span className="text-lg">⏱️</span>
-            <span className="text-xl font-bold">
+        </div>
+
+        {/* Timer - Right side above grid on md and below, over middle panel on lg+ */}
+        <div className="flex justify-end md:justify-end lg:hidden">
+          <div
+            className={`flex max-w-[6rem] items-center justify-center gap-1 rounded-t-lg px-2 py-1 text-lg font-light transition-transform duration-1000 sm:mb-2 sm:rounded-lg sm:text-2xl ${
+              secondsLeft <= 30 ? "animate-pulse text-red-500" : ""
+            }`}
+          >
+            <FaHourglassHalf
+              className={`text-base sm:text-xl ${secondsLeft <= 30 ? "text-red-500" : ""}`}
+            />
+            <span className={secondsLeft <= 30 ? "text-red-500" : ""}>
               {Math.floor(secondsLeft / 60)}:
               {(secondsLeft % 60).toString().padStart(2, "0")}
             </span>
@@ -425,7 +430,23 @@ const WordHunter: React.FC = () => {
           </div>
 
           {/* Middle Panel - Game Board */}
-          <div className="order-1 select-none lg:order-2 lg:col-span-6">
+          <div className="relative order-1 select-none lg:order-2 lg:col-span-6">
+            {/* Timer - Positioned over the right side of middle panel (lg+ only) */}
+            <div className="absolute right-4 top-4 z-10 hidden lg:block">
+              <div
+                className={`flex max-w-[6rem] items-center justify-center gap-1 rounded-t-lg px-2 py-1 text-lg font-light transition-transform duration-1000 sm:mb-2 sm:rounded-lg sm:text-2xl ${
+                  secondsLeft <= 30 ? "animate-pulse text-red-500" : ""
+                }`}
+              >
+                <FaHourglassHalf
+                  className={`text-base sm:text-xl ${secondsLeft <= 30 ? "text-red-500" : ""}`}
+                />
+                <span className={secondsLeft <= 30 ? "text-red-500" : ""}>
+                  {Math.floor(secondsLeft / 60)}:
+                  {(secondsLeft % 60).toString().padStart(2, "0")}
+                </span>
+              </div>
+            </div>
             <div className="flex flex-col rounded-2xl bg-[#01685e] px-4 py-6 shadow-xl sm:h-[600px] sm:px-6">
               {/* Game Board - Centered with reduced spacing */}
               <div className="flex items-center justify-center sm:flex-1">
@@ -537,7 +558,7 @@ const WordHunter: React.FC = () => {
               </div>
 
               {/* Game Instructions */}
-              <div className="mt-4 flex-shrink-0 text-center text-sm text-[#b1dfbc]">
+              {/* <div className="mt-4 flex-shrink-0 text-center text-sm text-[#b1dfbc]">
                 <p className="hidden sm:block">
                   Click and drag to connect adjacent letters and form words!
                 </p>
@@ -545,7 +566,7 @@ const WordHunter: React.FC = () => {
                   Tap and drag to connect adjacent letters and form words!
                 </p>
                 <p>Words must be at least 3 letters long.</p>
-              </div>
+              </div> */}
             </div>
           </div>
 
