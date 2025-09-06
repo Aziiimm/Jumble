@@ -263,9 +263,13 @@ router.post("/:id/finish", async (req, res, next) => {
     try {
       const roomCode = await redis.get(`game:${gameId}:roomCode`);
       if (roomCode) {
-        await openLobby(roomCode);
+        console.log("Reopening lobby after game finish:", roomCode);
+        const result = await openLobby(roomCode);
+        console.log("openLobby result:", result);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("Error reopening lobby:", e);
+    }
 
     // broadcast to the room
     emitToGame(gameId, "game:ended", {

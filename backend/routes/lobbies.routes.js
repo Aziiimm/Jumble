@@ -183,6 +183,15 @@ router.post("/:code/start", async (req, res, next) => {
         .status(403)
         .json({ message: "only the owner can start the lobby" });
     }
+
+    // Debug: Log lobby state after reopening
+    console.log("Lobby after reopening:", {
+      roomCode,
+      status: lobby.state.status,
+      members: lobby.members,
+      names: lobby.names,
+      ownerId: lobby.state.ownerId,
+    });
     if (lobby.state.status !== "open") {
       return res
         .status(409)
@@ -254,6 +263,20 @@ router.post("/:code/start", async (req, res, next) => {
         // Finish the game
         await finishGame(gameId);
 
+        // Reopen the lobby so players can start a new game
+        try {
+          const roomCode = await redis.get(`game:${gameId}:roomCode`);
+          if (roomCode) {
+            console.log("Reopening lobby after auto-finish:", roomCode);
+            const result = await openLobby(roomCode);
+            console.log("openLobby result:", result);
+
+            // Don't notify players yet - they'll be redirected when owner clicks "Back to Lobby"
+          }
+        } catch (e) {
+          console.error("Error reopening lobby after auto-finish:", e);
+        }
+
         // Notify all players that the game has ended
         emitToGame(gameId, "game:ended", { gameId });
 
@@ -273,6 +296,38 @@ router.post("/:code/start", async (req, res, next) => {
       names,
       scores,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /lobbies/:code/reopen -> owner reopens lobby and notifies all players
+router.post("/:code/reopen", async (req, res, next) => {
+  try {
+    const roomCode = req.params.code;
+    const { ownerId } = req.body || {};
+
+    if (!roomCode || typeof roomCode !== "string") {
+      return res.status(400).json({ message: "invalid roomCode" });
+    }
+    if (!ownerId || typeof ownerId !== "string") {
+      return res.status(400).json({ message: "ownerId is required" });
+    }
+
+    const lobby = await loadLobby(roomCode);
+    if (!lobby) {
+      return res.status(404).json({ message: "lobby not found or expired" });
+    }
+    if (lobby.state.ownerId !== ownerId) {
+      return res
+        .status(403)
+        .json({ message: "only the owner can reopen the lobby" });
+    }
+
+    // Notify all players that the lobby is reopened
+    emitToLobby(roomCode, "lobby:reopened", { roomCode });
+
+    return res.status(200).json({ message: "lobby reopened", roomCode });
   } catch (err) {
     next(err);
   }

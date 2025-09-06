@@ -53,6 +53,10 @@ const WordHunter: React.FC = () => {
       console.log("Received game:started from lobby:", gameData);
       setLobbyGameData(gameData);
     },
+    onReopened: ({ roomCode: reopenedRoomCode }) => {
+      console.log("Lobby reopened, redirecting to lobby:", reopenedRoomCode);
+      navigate(`/lobby/${reopenedRoomCode}`);
+    },
   });
 
   const { started: gameStarted, scores } = useGameSocket(gameId, {
@@ -334,7 +338,25 @@ const WordHunter: React.FC = () => {
             {isOwner && (
               <button
                 className="ml-4 rounded-md bg-yellow-400 px-3 py-1 text-[#876124] hover:bg-yellow-300"
-                onClick={() => navigate(`/lobby/${roomCodeLabel}`)}
+                onClick={async () => {
+                  try {
+                    // Notify all players that lobby is reopened
+                    await fetch(
+                      `http://localhost:3000/lobbies/${roomCodeLabel}/reopen`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ ownerId: playerId }),
+                      },
+                    );
+                    // Navigate to lobby
+                    navigate(`/lobby/${roomCodeLabel}`);
+                  } catch (error) {
+                    console.error("Error reopening lobby:", error);
+                    // Still navigate even if API call fails
+                    navigate(`/lobby/${roomCodeLabel}`);
+                  }
+                }}
               >
                 Back to Lobby
               </button>

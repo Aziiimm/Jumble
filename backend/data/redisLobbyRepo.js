@@ -135,11 +135,25 @@ export async function openLobby(roomCode) {
   const raw = await redis.get(state);
   if (!raw) return { ok: false, reason: "not_found" };
   const doc = JSON.parse(raw);
+
+  console.log("openLobby - Before:", {
+    roomCode,
+    status: doc.status,
+    members: doc.members,
+  });
+
   if (doc.status === "open") return { ok: true, state: doc };
 
   doc.status = "open";
   let ttl = await redis.ttl(state);
   if (ttl < 0) ttl = LOBBY_TTL;
   await redis.set(state, JSON.stringify(doc), { EX: ttl });
+
+  console.log("openLobby - After:", {
+    roomCode,
+    status: doc.status,
+    members: doc.members,
+  });
+
   return { ok: true, state: doc };
 }

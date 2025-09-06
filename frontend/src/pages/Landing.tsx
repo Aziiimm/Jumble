@@ -1,8 +1,8 @@
 // src/pages/Landing.tsx
 
-import React from "react";
+import React, { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import banner from "../assets/images/jumble_banner.png";
 import wordhunter from "../assets/images/wordhunter.png";
@@ -21,16 +21,86 @@ const games = [
 ];
 
 const Landing: React.FC = () => {
+  const navigate = useNavigate();
+  const [roomCode, setRoomCode] = useState("");
+  const [isCreatingLobby, setIsCreatingLobby] = useState(false);
+  const [isJoiningLobby, setIsJoiningLobby] = useState(false);
+  const [selectedGame, setSelectedGame] = useState(1); // Default to Word Hunter
+
+  const handleCreateLobby = async () => {
+    setIsCreatingLobby(true);
+    try {
+      const response = await fetch("http://localhost:3000/lobbies/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerId: "u_owner_" + Math.random().toString(36).slice(2, 8),
+          ownerName: "OwnerName",
+        }),
+      });
+      const data = await response.json();
+
+      // Set owner data and navigate to lobby
+      localStorage.setItem("isOwner", "true");
+      localStorage.setItem("playerId", data.ownerId);
+      localStorage.setItem("playerName", "OwnerName");
+      localStorage.setItem("roomCode", data.roomCode);
+
+      navigate(`/lobby/${data.roomCode}`);
+    } catch (error) {
+      console.error("Error creating lobby:", error);
+      alert("Error creating lobby. Please try again.");
+    } finally {
+      setIsCreatingLobby(false);
+    }
+  };
+
+  const handleJoinLobby = async () => {
+    if (!roomCode) {
+      alert("Please enter a room code!");
+      return;
+    }
+
+    setIsJoiningLobby(true);
+    try {
+      const response = await fetch(
+        `http://localhost:3000/lobbies/${roomCode}/join`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            playerId: "u_guest_" + Math.random().toString(36).slice(2, 8),
+            name: "Guest-" + Math.random().toString(36).slice(2, 6),
+          }),
+        },
+      );
+      const data = await response.json();
+
+      // Set guest data and navigate to lobby
+      localStorage.setItem("isOwner", "false");
+      localStorage.setItem("playerId", data.joined);
+      localStorage.setItem("playerName", data.name || "Guest");
+      localStorage.setItem("roomCode", roomCode);
+
+      navigate(`/lobby/${roomCode}`);
+    } catch (error) {
+      console.error("Error joining lobby:", error);
+      alert("Error joining lobby. Please check the room code and try again.");
+    } finally {
+      setIsJoiningLobby(false);
+    }
+  };
+
   return (
     <div>
       <div className="mx-auto w-8/12 pt-8 3xl:w-7/12">
         <div className="flex flex-col-reverse items-center lg:flex-row lg:justify-between">
-          <p className="mt-4 space-y-2 text-center font-adlam text-4xl text-white sm:text-center sm:text-5xl md:mt-0 md:text-5xl lg:w-5/12 lg:text-start lg:text-4xl xl:text-5xl 2xl:text-6xl 3xl:text-7xl">
+          <div className="mt-4 space-y-2 text-center font-adlam text-4xl text-white sm:text-center sm:text-5xl md:mt-0 md:text-5xl lg:w-5/12 lg:text-start lg:text-4xl xl:text-5xl 2xl:text-6xl 3xl:text-7xl">
             <div>Party Games, Anywhere.</div>
             <div className="text-nowrap text-center text-sm sm:text-center sm:text-base lg:text-start 2xl:text-2xl">
               Play with Friends or Against AI opponents
             </div>
-          </p>
+          </div>
           <img className="w-full md:w-9/12 lg:w-6/12 xl:w-5/12" src={banner} />
         </div>
       </div>
@@ -44,10 +114,14 @@ const Landing: React.FC = () => {
             </label>
             <div className="grid w-full grid-cols-2 gap-4 md:px-8 lg:grid-cols-2 lg:px-0">
               {games.map((game) => (
-                <Link
+                <div
                   key={game.id}
-                  to={game.id === 1 ? "/wordhunter" : "#"}
-                  className="flex flex-col items-center rounded-lg border bg-[#fcf8cf] p-2 shadow-md transition duration-150 ease-in-out hover:shadow-lg sm:px-2 sm:py-4 lg:px-0"
+                  onClick={() => setSelectedGame(game.id)}
+                  className={`flex cursor-pointer flex-col items-center rounded-lg border p-2 shadow-md transition duration-150 ease-in-out hover:shadow-lg sm:px-2 sm:py-4 lg:px-0 ${
+                    selectedGame === game.id
+                      ? "bg-[#01685e] text-white"
+                      : "bg-[#fcf8cf]"
+                  }`}
                 >
                   <img
                     src={game.image}
@@ -57,7 +131,7 @@ const Landing: React.FC = () => {
                   <h3 className="w-full text-nowrap text-center text-xs sm:text-base sm:text-lg lg:text-sm xl:text-lg 2xl:text-xl">
                     {game.title}
                   </h3>
-                </Link>
+                </div>
               ))}
             </div>
             <div className="pb-10">
@@ -67,6 +141,15 @@ const Landing: React.FC = () => {
               </div>
               <div className="mt-2 w-full px-4 text-xs font-light text-gray-600 hover:cursor-default sm:text-base">
                 You will be matched against an AI player. No account necessary!
+              </div>
+              <div className="mt-4 flex w-full justify-center px-4">
+                <button
+                  onClick={handleCreateLobby}
+                  disabled={isCreatingLobby}
+                  className="w-full rounded-xl bg-[#01685e] px-4 py-3 text-white transition duration-150 ease-in-out hover:bg-[#014d47] disabled:opacity-50"
+                >
+                  {isCreatingLobby ? "Creating..." : "Create Lobby"}
+                </button>
               </div>
             </div>
           </div>
@@ -82,23 +165,26 @@ const Landing: React.FC = () => {
                 <input
                   type="number"
                   inputMode="numeric"
-                  min="1"
+                  min="0"
                   max="9999"
                   maxLength={4}
-                  className="no-spinners h-full w-11/12 appearance-none rounded-xl bg-[#febd4f] pl-4 text-[#876124] placeholder-[#876124] shadow-sm outline-none"
-                  placeholder="Enter Code"
-                  onInput={(e) => {
-                    const target = e.target as HTMLInputElement;
-                    if (target.value.length > 4) {
-                      target.value = target.value.slice(0, 4);
+                  value={roomCode}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Only allow numbers and limit to 4 digits
+                    if (/^\d*$/.test(value) && value.length <= 4) {
+                      setRoomCode(value);
                     }
                   }}
+                  className="no-spinners h-full w-11/12 appearance-none rounded-xl bg-[#febd4f] pl-4 text-[#876124] placeholder-[#876124] shadow-sm outline-none"
+                  placeholder="Enter Code"
                 />
                 <button
-                  type="submit"
-                  className="h-full w-3/6 rounded-2xl rounded-r-xl bg-[#ffa93d] text-[#876124] transition duration-150 ease-in-out hover:brightness-90"
+                  onClick={handleJoinLobby}
+                  disabled={isJoiningLobby}
+                  className="h-full w-3/6 rounded-2xl rounded-r-xl bg-[#ffa93d] text-[#876124] transition duration-150 ease-in-out hover:brightness-90 disabled:opacity-50"
                 >
-                  Join
+                  {isJoiningLobby ? "Joining..." : "Join"}
                 </button>
               </div>
             </div>

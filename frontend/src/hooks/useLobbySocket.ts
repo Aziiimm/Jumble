@@ -63,7 +63,14 @@ export function useLobbySocket(
       if (d.roomCode === roomCode) opts.onClosed?.(d);
     };
     const onReopened = (d: { roomCode: string }) => {
-      if (d.roomCode === roomCode) opts.onReopened?.(d);
+      console.log("Received lobby:reopened event:", d);
+      console.log("Current roomCode:", roomCode);
+      if (d.roomCode === roomCode) {
+        console.log("Calling onReopened callback");
+        opts.onReopened?.(d);
+      } else {
+        console.log("Room code mismatch, ignoring reopen event");
+      }
     };
     const onGameStarted = (d: GameStarted) => {
       console.log("Lobby socket received game:started:", d);
