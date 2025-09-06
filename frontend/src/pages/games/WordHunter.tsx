@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import { useLobbySocket } from "@/hooks/useLobbySocket";
-import { submitWord, finishGame } from "@/services/api";
+import { submitWord } from "@/services/api";
 import { isValidWord } from "@/utils/gameUtils";
 
 import { MdPeopleAlt } from "react-icons/md";
@@ -28,14 +28,6 @@ const WordHunter: React.FC = () => {
     (() => {
       const v = "u_" + Math.random().toString(36).slice(2, 8);
       localStorage.setItem("playerId", v);
-      return v;
-    })();
-
-  const playerName =
-    localStorage.getItem("playerName") ||
-    (() => {
-      const v = "Guest-" + playerId.slice(-4);
-      localStorage.setItem("playerName", v);
       return v;
     })();
 
@@ -100,8 +92,6 @@ const WordHunter: React.FC = () => {
   // Audio refs for sound effects
   const successSoundRef = useRef<HTMLAudioElement | null>(null);
 
-  // player data
-  const livePlayerIds = started?.players || [];
   const names = started?.names || {};
 
   // Initialize audio elements
