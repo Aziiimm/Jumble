@@ -12,6 +12,8 @@ import Error from "./pages/Error";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import WordHunter from "./pages/games/WordHunter";
+import LobbyPage from "./pages/games/LobbyPage";
+import TestSetup from "./pages/TestSetup";
 
 // toast
 import { Toaster } from "./components/ui/toaster";
@@ -28,7 +30,12 @@ const App: React.FC = () => {
             <Route path="/login" element={<Login />} />
 
             {/* games */}
-            <Route path="/wordhunter" element={<WordHunter />} />
+            <Route path="/wordhunter/:id" element={<WordHunter />} />
+            <Route path="/lobby/:code" element={<LobbyPage />} />
+
+            {/* test setup */}
+            <Route path="/test" element={<TestSetup />} />
+
             {/* for page not found */}
             <Route path="*" element={<Error />} />
           </Route>

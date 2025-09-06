@@ -199,7 +199,10 @@ router.post("/:code/start", async (req, res, next) => {
     await saveNewGame({ gameId, board, durationSec: duration });
 
     // 2) copy lobby members into the game
+    console.log("Lobby members:", lobby.members);
+    console.log("Lobby names:", lobby.names);
     for (const pid of lobby.members) {
+      console.log("Adding player to game:", pid);
       await addPlayer(gameId, pid);
       const displayName = lobby.names?.[pid] ?? null;
       if (displayName) await setPlayerName(gameId, pid, displayName);
@@ -216,6 +219,8 @@ router.post("/:code/start", async (req, res, next) => {
 
     const scores = await getScores(gameId);
     const names = await getPlayerNames(gameId);
+    console.log("Game scores:", scores);
+    console.log("Game names:", names);
 
     // notify the game room that game has started (clients will join game:<id>)
     const stateDoc = await loadState(gameId); // to get startTs/duration
@@ -228,6 +233,7 @@ router.post("/:code/start", async (req, res, next) => {
       startTs: stateDoc?.startTs ?? Date.now(),
       durationSec: stateDoc?.durationSec ?? 80,
     };
+    console.log("Start payload:", startPayload);
 
     // notify lobby that its closing & which game to navigate to
     emitToLobby(roomCode, "lobby:closed", { roomCode, gameId });

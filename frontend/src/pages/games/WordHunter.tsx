@@ -1,98 +1,94 @@
 // src/pages/games/WordHunter.tsx
 
-import React, { useState, useRef, useEffect } from "react";
-import {
-  generateGameBoard,
-  isValidWord,
-  calculateWordPoints,
-} from "../../utils/gameUtils";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useGameSocket } from "@/hooks/useGameSocket";
+import { useLobbySocket } from "@/hooks/useLobbySocket";
+import { submitWord, finishGame } from "@/services/api";
+import { isValidWord } from "@/utils/gameUtils";
 
 import { MdPeopleAlt } from "react-icons/md";
 import { FaTrophy } from "react-icons/fa";
 
-// Mock data types
-interface Player {
-  id: number;
-  name: string;
-  profilePicture: string;
-  wins: number;
-}
+const dog =
+  "https://www.nylabone.com/-/media/project/oneweb/nylabone/images/dog101/10-intelligent-dog-breeds/golden-retriever-tongue-out.jpg?h=430&w=710&hash=7FEB820D235A44B76B271060E03572C7";
 
 interface FoundWord {
   word: string;
   points: number;
 }
 
-// Mock data
-const mockPlayers: Player[] = [
-  {
-    id: 1,
-    name: "Ivan Chen",
-    profilePicture:
-      "https://hips.hearstapps.com/hmg-prod/images/dog-puppy-on-garden-royalty-free-image-1586966191.jpg?crop=0.752xw:1.00xh;0.175xw,0&resize=1200:*",
-    wins: 0,
-  },
-  {
-    id: 2,
-    name: "Lebron James",
-    profilePicture:
-      "https://www.communitycatspodcast.com/wp-content/uploads/2023/03/Cat6.jpg",
-    wins: 0,
-  },
-  {
-    id: 3,
-    name: "Steve",
-    profilePicture:
-      "https://hips.hearstapps.com/hmg-prod/images/dog-puppy-on-garden-royalty-free-image-1586966191.jpg?crop=0.752xw:1.00xh;0.175xw,0&resize=1200:*",
-    wins: 0,
-  },
-  {
-    id: 4,
-    name: "bronny james",
-    profilePicture:
-      "https://www.communitycatspodcast.com/wp-content/uploads/2023/03/Cat6.jpg",
-    wins: 0,
-  },
-  {
-    id: 5,
-    name: "labubu",
-    profilePicture:
-      "https://hips.hearstapps.com/hmg-prod/images/dog-puppy-on-garden-royalty-free-image-1586966191.jpg?crop=0.752xw:1.00xh;0.175xw,0&resize=1200:*",
-    wins: 0,
-  },
-  {
-    id: 6,
-    name: "Chris",
-    profilePicture:
-      "https://www.communitycatspodcast.com/wp-content/uploads/2023/03/Cat6.jpg",
-    wins: 0,
-  },
-  {
-    id: 7,
-    name: "Naruto",
-    profilePicture:
-      "https://hips.hearstapps.com/hmg-prod/images/dog-puppy-on-garden-royalty-free-image-1586966191.jpg?crop=0.752xw:1.00xh;0.175xw,0&resize=1200:*",
-    wins: 0,
-  },
-  {
-    id: 8,
-    name: "Player 8",
-    profilePicture:
-      "https://www.communitycatspodcast.com/wp-content/uploads/2023/03/Cat6.jpg",
-    wins: 0,
-  },
-];
-
 const WordHunter: React.FC = () => {
+  const { id: gameId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  // TEMPORARY PLAYER ID (UNTIL AUTH IS DONE): use a fixed id/name per browser tab
+  const playerId =
+    localStorage.getItem("playerId") ||
+    (() => {
+      const v = "u_" + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem("playerId", v);
+      return v;
+    })();
+
+  const playerName =
+    localStorage.getItem("playerName") ||
+    (() => {
+      const v = "Guest-" + playerId.slice(-4);
+      localStorage.setItem("playerName", v);
+      return v;
+    })();
+
+  // Socket: live game info (board/startTs/duration) + live scores
+  const onGameEnded = useCallback(() => {
+    setShowEnded(true); // banner on everyone's client
+  }, []);
+
+  // Listen for game:started from lobby room first, then join game room
+  const [lobbyGameData, setLobbyGameData] = useState<any>(null);
+  const roomCode = localStorage.getItem("roomCode");
+
+  useLobbySocket(roomCode || "", {
+    onGameStartedInLobby: (gameData) => {
+      console.log("Received game:started from lobby:", gameData);
+      setLobbyGameData(gameData);
+    },
+  });
+
+  const { started: gameStarted, scores } = useGameSocket(gameId, {
+    onEnded: onGameEnded,
+  });
+
+  // Use lobby data if available, otherwise use game socket data
+  const started = lobbyGameData || gameStarted;
+
+  // board created on the backend
+  const board = started?.board || [];
+
+  // timer
+  const [timeLeftMs, setTimeLeftMs] = useState(0);
+  useEffect(() => {
+    if (!started) return;
+    const endTs = started.startTs + started.durationSec * 1000;
+    const id = window.setInterval(() => {
+      setTimeLeftMs(Math.max(0, endTs - Date.now()));
+    }, 250);
+    return () => clearInterval(id);
+  }, [started]);
+  const secondsLeft = Math.ceil(timeLeftMs / 1000);
+
+  // End banner + lobby navigation (owner only)
+  const roomCodeLabel = localStorage.getItem("roomCode") || "-";
+  const isOwner = localStorage.getItem("isOwner") === "true"; // set this when you create lobby/start
+
   const [foundWords, setFoundWords] = useState<FoundWord[]>([]);
   const [currentWord, setCurrentWord] = useState<string>("");
   const [selectedTiles, setSelectedTiles] = useState<number[][]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [board, setBoard] = useState<string[][]>([]);
-  const [players] = useState<Player[]>(mockPlayers);
   const [wordStatus, setWordStatus] = useState<
     "neutral" | "success" | "duplicate"
   >("neutral");
+  const [showEnded, setShowEnded] = useState<boolean>(false);
 
   const dragStartRef = useRef<number[] | null>(null);
   // const boardRef = useRef<HTMLDivElement>(null);
@@ -100,10 +96,9 @@ const WordHunter: React.FC = () => {
   // Audio refs for sound effects
   const successSoundRef = useRef<HTMLAudioElement | null>(null);
 
-  // Generate random board on component mount
-  useEffect(() => {
-    setBoard(generateGameBoard());
-  }, []);
+  // player data
+  const livePlayerIds = started?.players || [];
+  const names = started?.names || {};
 
   // Initialize audio elements
   useEffect(() => {
@@ -111,6 +106,14 @@ const WordHunter: React.FC = () => {
 
     // Preload audio file
     successSoundRef.current.load();
+
+    // Cleanup on unmount
+    return () => {
+      if (successSoundRef.current) {
+        successSoundRef.current.pause();
+        successSoundRef.current = null;
+      }
+    };
   }, []);
 
   // Function to play success sound
@@ -226,34 +229,46 @@ const WordHunter: React.FC = () => {
   };
 
   // Handle drag end
-  const handleMouseUp = () => {
-    if (isDragging && selectedTiles.length >= 3) {
+  const handleMouseUp = async () => {
+    if (isDragging && selectedTiles.length >= 3 && board.length) {
       const word = selectedTiles.map((pos) => board[pos[0]][pos[1]]).join("");
+      const looksValid = isValidWord(word);
 
-      // Validate word using utility function
-      if (isValidWord(word)) {
-        const points = calculateWordPoints(word);
+      // Only submit if it looks valid on client side
+      if (!looksValid) {
+        setWordStatus("neutral");
+        return;
+      }
 
-        // Check if word already exists
-        const wordExists = foundWords.some((found) => found.word === word);
-        if (!wordExists) {
-          setFoundWords((prev) => [...prev, { word, points }]);
-          vibrateDevice(); // Vibrate device for success
-          playSuccessSound(); // Play success sound
-          // Keep success status for a moment to show completion
+      try {
+        // send to backend
+        console.log("Submitting word:", word, "path:", selectedTiles);
+        const resp = await submitWord(gameId!, playerId, selectedTiles);
+        console.log("Submit response:", resp);
+
+        if (resp.accepted) {
+          // Success feedback
+          vibrateDevice();
+          playSuccessSound();
+          setFoundWords((prev) => [
+            ...prev,
+            { word: resp.word, points: resp.points },
+          ]);
+          setWordStatus("success");
         } else {
-          // Keep duplicate status for a moment to show feedback
+          // Server rejected
+          // reasons: "invalid_path", "not_in_dictionary", "duplicate_word", "too_short"
+          if (resp.reason === "duplicate_word") setWordStatus("duplicate");
+          else setWordStatus("neutral");
         }
-      } else {
-        // Invalid word - no sound needed
+      } catch (e) {
+        console.error("submit failed", e);
+        setWordStatus("neutral");
       }
     }
 
-    // Reset word status after a delay to show the feedback
-    setTimeout(() => {
-      setWordStatus("neutral");
-    }, 1);
-
+    // reset selection quickly
+    setTimeout(() => setWordStatus("neutral"), 1);
     setIsDragging(false);
     setSelectedTiles([]);
     setCurrentWord("");
@@ -313,8 +328,22 @@ const WordHunter: React.FC = () => {
           <h1 className="text-4xl">Word Hunter</h1>
         </div>
 
-        {/* Current Word Display */}
-        <div className="mb-6 flex items-center justify-center">
+        {showEnded && (
+          <div className="mb-4 rounded-lg bg-yellow-500/20 p-3 text-center text-yellow-100">
+            Round over!
+            {isOwner && (
+              <button
+                className="ml-4 rounded-md bg-yellow-400 px-3 py-1 text-[#876124] hover:bg-yellow-300"
+                onClick={() => navigate(`/lobby/${roomCodeLabel}`)}
+              >
+                Back to Lobby
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Current Word Display and Timer */}
+        <div className="mb-6 flex items-center justify-center gap-4">
           <div
             className={`inline-block flex min-h-[2.5rem] min-w-[6rem] items-center justify-center rounded-lg px-6 transition-all duration-150 ${
               wordStatus === "success"
@@ -325,6 +354,15 @@ const WordHunter: React.FC = () => {
             }`}
           >
             <span className="text-xl">{currentWord || ""}</span>
+          </div>
+
+          {/* Timer */}
+          <div className="flex items-center gap-2 rounded-lg bg-[#01685E] px-4 py-2">
+            <span className="text-lg">⏱️</span>
+            <span className="text-xl font-bold">
+              {Math.floor(secondsLeft / 60)}:
+              {(secondsLeft % 60).toString().padStart(2, "0")}
+            </span>
           </div>
         </div>
 
@@ -405,8 +443,8 @@ const WordHunter: React.FC = () => {
                   )}
 
                   <div className="grid grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-                    {board.map((row, rowIndex) =>
-                      row.map((letter, colIndex) => (
+                    {board.map((row: string[], rowIndex: number) =>
+                      row.map((letter: string, colIndex: number) => (
                         <div
                           key={`${rowIndex}-${colIndex}`}
                           data-row={rowIndex}
@@ -478,11 +516,10 @@ const WordHunter: React.FC = () => {
             <div className="flex h-[400px] flex-col rounded-2xl bg-[#01685e] p-6 shadow-xl lg:h-[600px]">
               {/* Room Code */}
               <div className="mb-4 flex justify-between">
-                {/* PLACEHOLDER ROOM CODE WILL FILL WITH ROOM CODE GENERATED FROM BACKEND LATER  */}
-                <div className="text-lg">Room Code: 3000</div>
+                <div className="text-lg">Room Code: {roomCodeLabel}</div>
                 <div className="flex items-center justify-end gap-2 text-lg">
                   {<MdPeopleAlt />}
-                  {players.length}/8
+                  {started?.players?.length ?? 0}/8
                 </div>
               </div>
 
@@ -490,23 +527,23 @@ const WordHunter: React.FC = () => {
               <div className="flex h-[400px] overflow-hidden sm:h-[500px]">
                 {/* Hidden scrollbar but keeps scroll functionality */}
                 <div className="scrollbar-hide w-full space-y-3 overflow-y-auto">
-                  {players.map((player) => (
+                  {(started?.players ?? []).map((pid: string) => (
                     <div
-                      key={player.id}
+                      key={pid}
                       className="flex flex-shrink-0 items-center space-x-3 rounded-lg bg-[#febd4f] p-2 shadow-md"
                     >
                       <img
-                        src={player.profilePicture}
-                        alt={player.name}
+                        src={dog}
+                        alt={names[pid] || pid}
                         className="h-12 w-12 rounded-full object-cover"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[#876124]">
-                          {player.name}
+                          {names[pid] || pid}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-[#876124]">
-                        {<FaTrophy />} {player.wins}
+                        {<FaTrophy />} {scores?.[pid] ?? 0}
                       </div>
                     </div>
                   ))}
