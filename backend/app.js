@@ -33,6 +33,17 @@ app.get("/", (req, res) => {
   res.send("Welcome to jumble");
 });
 
+// Auth0-protected test route
+app.get("/api/protected", checkJwt, (req, res) => {
+    // verified JWT; claims are on req.auth.payload
+    res.json({
+        ok: true,
+        sub: req.auth.payload.sub,
+        email: req.auth.payload.email || null,
+    });
+});
+
+
 //test db connection: health check that pings Postgres
 app.get("/health", async (_req, res) => {
   try {

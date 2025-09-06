@@ -9,9 +9,13 @@ lerna-debug.log*
 
 # Env files
 .env
+**/.env
 ../backend/.env
 ../frontend/.env
 
+# vite
+frontend/.env
+frontend/.env.*
 
 node_modules/
 dist

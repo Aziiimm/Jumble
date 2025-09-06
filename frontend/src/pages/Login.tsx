@@ -1,50 +1,26 @@
 // src/pages/Login.tsx
+import { useEffect } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 
-import { Link } from "react-router-dom";
-import React, { useState } from "react";
+export default function Login() {
+  const { loginWithPopup, loginWithRedirect, isAuthenticated } = useAuth0();
 
-
-
-const Login: React.FC = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-
-    const userData = {
-      email,
-      password,
-    };
-
-    try {
-      const response = await fetch("http://localhost:3000/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include", //allows cookies to send/recieve
-        body: JSON.stringify(userData)
-      })
-
-      const result = await response.json();
-      console.log("login response:", result);
-
-      if (result.ok === true) {
-        // redirect to dashboard/lobby
-        //   window.location.href = "/dashboard";
-        console.log("login successful!\n")
-        console.log("user: ", userData.email)
-      } else {
-        alert(result.message || "Login failed");
+  useEffect(() => {
+    (async () => {
+      try {
+        await loginWithPopup({
+          authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE },
+        });
+      } catch {
+        await loginWithRedirect(); // fallback if popup blocked
       }
+    })();
+  }, [loginWithPopup, loginWithRedirect]);
 
-    } catch (err) {
-      console.error("Something went wrong during login:", err);
-      alert("An error occurred. Please try again.");
-
-    }
-  }
+  if (isAuthenticated) window.location.replace("/");
 
   return (
+<<<<<<< HEAD
     <section className="h-[calc(70vh)] w-full px-6 pt-16 font-adlam text-white">
       <div className="flex flex-col items-center">
         <div className="w-full rounded-lg bg-[#b1dfbc] shadow sm:max-w-md md:mt-0 xl:p-0">
@@ -106,10 +82,14 @@ const Login: React.FC = () => {
               </p>
             </form>
           </div>
+=======
+    <section className="mt-24 h-[calc(60vh)] w-full bg-[#0da49d] px-6 font-adlam text-white">
+      <div className="flex items-center justify-center h-full">
+        <div className="rounded-lg bg-[#b1dfbc] px-6 py-4 shadow">
+          <p className="text-[#01685e]">Opening secure login…</p>
+>>>>>>> be29d06 (feat(auth): add Auth0 SPA + API protection)
         </div>
       </div>
     </section>
   );
-};
-
-export default Login;
+}

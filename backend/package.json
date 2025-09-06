@@ -28,6 +28,9 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "express-oauth2-jwt-bearer": "^1.7.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3"
   }
 }
