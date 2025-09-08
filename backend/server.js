@@ -9,7 +9,7 @@ import http from "http";
 import app from "./app.js";
 import { initSockets } from "./realtime/sockets.js";
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 const server = http.createServer(app);
 
 // attach socket.io to the http server

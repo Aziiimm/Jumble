@@ -1,3 +1,4 @@
+
 /**
  * Creates table: games
  * - id: text PK (use your Redis gameId, e.g. g_990813)
