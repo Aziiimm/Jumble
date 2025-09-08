@@ -325,7 +325,7 @@ const WordHunter: React.FC = () => {
   }
 
   return (
-    <div className="px-6 pb-20 font-adlam text-[#FCF8CF] sm:pt-10">
+    <div className="px-6 pb-20 font-adlam text-[#FCF8CF] sm:pt-10 2xl:h-[80vh]">
       <div className="mx-auto w-full sm:w-10/12 lg:w-11/12 2xl:w-10/12 3xl:w-9/12">
         {showEnded && (
           <div className="mb-4 min-w-fit items-center place-self-center rounded-lg bg-[#01685e]/80 p-3 text-yellow-100">
