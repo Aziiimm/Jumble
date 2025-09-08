@@ -9,7 +9,8 @@ const Navbar: React.FC = () => {
   async function handleLogin() {
     try {
       await loginWithPopup({
-        authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE },
+        authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE, scope: "openid profile email", },
+
       });
     } catch {
       await loginWithRedirect();
@@ -53,7 +54,7 @@ const Navbar: React.FC = () => {
                 />
               )}
               <span className="hidden text-sm sm:inline">
-                {user?.name || user?.email}
+                {user?.username || user?.nickname || user?.name || user?.email}
               </span>
               <button
                 onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
