@@ -18,7 +18,7 @@ import LobbyPage from "./pages/games/LobbyPage";
 import { Toaster } from "./components/ui/toaster";
 
 //auth0 protected route test
-import ApiTest from "./pages/ApiTest";
+
 
 const App: React.FC = () => {
   return (
