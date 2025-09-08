@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const Register: React.FC = () => {
   return (
-    <section className="mt-24 h-[calc(75vh)] w-full bg-[#0da49d] px-6 font-adlam text-white">
+    <section className="h-[calc(75vh)] w-full px-6 pt-16 font-adlam text-white">
       <div className="mx-auto flex flex-col items-center">
         <div className="w-full rounded-lg bg-[#b1dfbc] shadow sm:max-w-md md:mt-0 xl:p-0">
           <div className="space-y-4 p-6 sm:p-8 md:space-y-6">

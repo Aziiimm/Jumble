@@ -5,7 +5,13 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate:make": "knex migrate:make --knexfile knexfile.js",
+    "migrate:latest": "knex migrate:latest --knexfile knexfile.js",
+    "migrate:rollback": "knex migrate:rollback --knexfile knexfile.js",
+    "seed:make": "knex seed:make --knexfile knexfile.js",
+    "seed:run": "knex seed:run --knexfile knexfile.js"
   },
   "author": "Muntaqa Maahi, Azim Rahat",
   "license": "ISC",
@@ -14,6 +20,12 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "pg": "^8.16.3"
+    "knex": "^3.1.0",
+    "pg": "^8.16.3",
+    "redis": "^5.8.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }
