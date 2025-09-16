@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import banner from "../assets/images/jumble_banner.png";
 import wordhunter from "../assets/images/wordhunter.png";
+import timebomb from "../assets/images/timebomb.png";
 
 const games = [
   {
@@ -16,7 +17,7 @@ const games = [
   {
     id: 2,
     title: "Timebomb",
-    image: wordhunter, // Placeholder image, replace with actual Timebomb image
+    image: timebomb,
   },
 ];
 
@@ -25,9 +26,14 @@ const Landing: React.FC = () => {
   const [roomCode, setRoomCode] = useState("");
   const [isCreatingLobby, setIsCreatingLobby] = useState(false);
   const [isJoiningLobby, setIsJoiningLobby] = useState(false);
-  const [selectedGame, setSelectedGame] = useState(1); // Default to Word Hunter
+  const [selectedGame, setSelectedGame] = useState<number | null>(null);
 
   const handleCreateLobby = async () => {
+    if (selectedGame === null) {
+      alert("Please select a game first!");
+      return;
+    }
+
     setIsCreatingLobby(true);
     try {
       const response = await fetch("http://localhost:3000/lobbies/", {
@@ -36,6 +42,7 @@ const Landing: React.FC = () => {
         body: JSON.stringify({
           ownerId: "u_owner_" + Math.random().toString(36).slice(2, 8),
           ownerName: "OwnerName",
+          gameType: selectedGame, // Include the selected game type
         }),
       });
       const data = await response.json();
@@ -147,10 +154,14 @@ const Landing: React.FC = () => {
               <div className="mt-4 flex w-full justify-center">
                 <button
                   onClick={handleCreateLobby}
-                  disabled={isCreatingLobby}
-                  className="w-full rounded-xl bg-[#01685e] px-4 py-3 text-white transition duration-150 ease-in-out hover:bg-[#014d47] disabled:opacity-50"
+                  disabled={isCreatingLobby || selectedGame === null}
+                  className="w-full rounded-xl bg-[#01685e] px-4 py-3 text-white transition duration-150 ease-in-out hover:bg-[#014d47] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isCreatingLobby ? "Creating..." : "Create Lobby"}
+                  {isCreatingLobby
+                    ? "Creating..."
+                    : selectedGame === null
+                      ? "Select a Game First"
+                      : "Create Lobby"}
                 </button>
               </div>
             </div>

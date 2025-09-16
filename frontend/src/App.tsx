@@ -13,12 +13,12 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import WordHunter from "./pages/games/WordHunter";
 import LobbyPage from "./pages/games/LobbyPage";
+import Leaderboard from "./pages/Leaderboard";
 
 // toast
 import { Toaster } from "./components/ui/toaster";
 
 //auth0 protected route test
-
 
 const App: React.FC = () => {
   return (
@@ -30,6 +30,7 @@ const App: React.FC = () => {
             <Route path="/" element={<Landing />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
 
             {/* games */}
             <Route path="/wordhunter/:id" element={<WordHunter />} />

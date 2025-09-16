@@ -21,6 +21,7 @@ Goal is to make a solid base for more games to be added later.
 - [ ] When auth is implemented, change routes to use req.user.{id, etc as necessary} from middleware
 - [ ] Add Guest Account feature (cannot participate in multiplayer games)
 - [ ] Add Google Analytics
+- [ ] Add CI/CD pipeline
 
 ## Database Migrations Workflow
 
