@@ -26,10 +26,13 @@ app.use(
 
 app.use(express.json());
 
+
 // Example route
 app.get("/", (req, res) => {
   res.send("Welcome to jumble");
 });
+
+
 
 //test db connection: health check that pings Postgres
 app.get("/health", async (_req, res) => {

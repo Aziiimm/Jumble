@@ -17,6 +17,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
@@ -26,6 +28,9 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "express-oauth2-jwt-bearer": "^1.7.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3"
   }
 }

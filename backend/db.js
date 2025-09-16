@@ -1,7 +1,6 @@
 // backend/db.js
 import pg from "pg";
 import * as dotenv from "dotenv";
-// import "dotenv/config";
 
 // load .env
 dotenv.config();
