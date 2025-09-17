@@ -1,26 +1,34 @@
 // src/pages/Profile.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Link } from "react-router-dom";
 import { Spinner } from "@/components/ui/spinner";
+import { useUser } from "@/contexts/UserContext";
 
 export default function Profile() {
   const { user, logout, isLoading } = useAuth0();
+  const { userProfile, isLoading: isLoadingStats, updateProfile } = useUser();
   const [profilePicture, setProfilePicture] = useState<string>("");
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
-    null,
-  );
   const [displayName, setDisplayName] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Mock user stats - replace with real data later
-  const userStats = {
-    gamesPlayed: 42,
-    gamesWon: 28,
-    totalScore: 15420,
-    winRate: 67,
-  };
+  // Update local state when userProfile changes
+  useEffect(() => {
+    if (userProfile) {
+      setDisplayName(userProfile.display_name || "");
+      // Use database profile picture, or fall back to Auth0 picture, or default
+      const dbProfilePicture = userProfile.profile_picture;
+      const auth0Picture = user?.picture;
+      const defaultPicture = "/default_profile.png";
+
+      setProfilePicture(
+        dbProfilePicture && dbProfilePicture !== "/default_profile.png"
+          ? dbProfilePicture
+          : auth0Picture || defaultPicture,
+      );
+    }
+  }, [userProfile, user]);
 
   const handleLogout = () => {
     logout({ logoutParams: { returnTo: window.location.origin } });
@@ -29,7 +37,6 @@ export default function Profile() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setProfilePictureFile(file);
       // Create a preview URL for the uploaded file
       const previewUrl = URL.createObjectURL(file);
       setProfilePicture(previewUrl);
@@ -39,9 +46,8 @@ export default function Profile() {
 
   const handleDisplayNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDisplayName(e.target.value);
-    const currentDisplayName =
-      user?.username || user?.nickname || user?.name || "";
-    setHasChanges(e.target.value !== currentDisplayName);
+    const currentDisplayName = userProfile?.display_name || "";
+    setHasChanges(e.target.value.trim() !== currentDisplayName);
   };
 
   const handleProfilePictureClick = () => {
@@ -55,14 +61,31 @@ export default function Profile() {
     e.preventDefault();
     setIsUpdating(true);
 
-    // TODO: Implement actual profile update functionality
-    console.log("Updating profile:", { profilePictureFile, displayName });
+    try {
+      // Check if display name has actually changed (trim whitespace)
+      const currentDisplayName = userProfile?.display_name || "";
+      const trimmedDisplayName = displayName?.trim();
+      const hasDisplayNameChanged =
+        trimmedDisplayName && trimmedDisplayName !== currentDisplayName;
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsUpdating(false);
+      // TODO: Handle profile picture upload (for now just update display name)
+      const updateData: any = {};
+      if (hasDisplayNameChanged) {
+        updateData.display_name = trimmedDisplayName;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await updateProfile(updateData);
+        setDisplayName(trimmedDisplayName);
+      }
+
       setHasChanges(false);
-    }, 1000);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Error updating profile. Please try again.");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (isLoading) {
@@ -158,12 +181,7 @@ export default function Profile() {
                   type="text"
                   value={displayName}
                   onChange={handleDisplayNameChange}
-                  placeholder={
-                    user?.username ||
-                    user?.nickname ||
-                    user?.name ||
-                    "Enter display name"
-                  }
+                  placeholder={"Enter display name"}
                   className="w-full rounded-xl border border-gray-300 bg-[#fcf8cf] px-3 py-2 text-sm text-[#876124] placeholder-[#876124] placeholder-opacity-70 focus:border-[#01685e] focus:outline-none sm:px-4 sm:py-3 sm:text-base"
                 />
               </div>
@@ -214,56 +232,75 @@ export default function Profile() {
               Your Stats
             </h2>
 
-            {/* Current User Info */}
-            <div className="mb-6 rounded-xl bg-[#fcf8cf] p-4 sm:mb-8 sm:p-6">
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-[#876124] sm:text-2xl">
-                  {user?.name || "Anonymous Player"}
-                </h3>
-                <p className="mt-1 text-sm text-[#876124] opacity-70 sm:mt-2 sm:text-base">
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-6">
-              <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
-                <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
-                  {userStats.gamesPlayed}
-                </div>
-                <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
-                  Games Played
+            {isLoadingStats ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center gap-3">
+                  <Spinner />
+                  <p className="text-[#01685e]">Loading stats...</p>
                 </div>
               </div>
+            ) : userProfile ? (
+              <div className="grid grid-cols-2 gap-3 sm:gap-6">
+                <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
+                  <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
+                    {userProfile.total_games_played || 0}
+                  </div>
+                  <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
+                    Games Played
+                  </div>
+                </div>
 
-              <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
-                <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
-                  {userStats.gamesWon}
+                <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
+                  <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
+                    {userProfile.total_wins || 0}
+                  </div>
+                  <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
+                    Games Won
+                  </div>
                 </div>
-                <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
-                  Games Won
-                </div>
-              </div>
 
-              <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
-                <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
-                  {userStats.totalScore.toLocaleString()}
+                <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
+                  <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
+                    {userProfile.wordhunt_wins || 0}
+                  </div>
+                  <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
+                    Word Hunter Wins
+                  </div>
                 </div>
-                <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
-                  Total Score
-                </div>
-              </div>
 
-              <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
-                <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
-                  {userStats.winRate}%
+                <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
+                  <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
+                    {Math.round((userProfile.wordhunt_win_rate || 0) * 100)}%
+                  </div>
+                  <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
+                    Word Hunter Win Rate
+                  </div>
                 </div>
-                <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
-                  Win Rate
+
+                <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
+                  <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
+                    {userProfile.timebomb_wins || 0}
+                  </div>
+                  <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
+                    Time Bomb Wins
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-[#fcf8cf] p-3 text-center sm:p-6">
+                  <div className="text-2xl font-bold text-[#876124] sm:text-4xl">
+                    {Math.round((userProfile.timebomb_win_rate || 0) * 100)}%
+                  </div>
+                  <div className="text-xs font-medium text-[#876124] opacity-70 sm:text-base">
+                    Time Bomb Win Rate
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-[#01685e]">Failed to load stats</p>
+              </div>
+            )}
           </div>
         </div>
 

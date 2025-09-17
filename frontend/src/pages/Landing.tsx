@@ -1,10 +1,10 @@
 // src/pages/Landing.tsx
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 // import { Switch } from "@/components/ui/switch";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
-import { buildApiUrl } from "../config/api";
+import { createAuthenticatedApiFunctions } from "../services/authenticatedApi";
 
 import banner from "../assets/images/jumble_banner.png";
 import wordhunter from "../assets/images/wordhunter.png";
@@ -18,18 +18,23 @@ const games = [
   },
   {
     id: 2,
-    title: "Timebomb (coming soon)",
+    title: "Coming Soon!",
     image: timebomb,
   },
 ];
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth0();
+  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [roomCode, setRoomCode] = useState("");
   const [isCreatingLobby, setIsCreatingLobby] = useState(false);
   const [isJoiningLobby, setIsJoiningLobby] = useState(false);
   const [selectedGame, setSelectedGame] = useState<number | null>(null);
+
+  // Memoize API object to prevent constant recreation
+  const api = useMemo(() => {
+    return createAuthenticatedApiFunctions(getAccessTokenSilently);
+  }, [getAccessTokenSilently]);
 
   const handleCreateLobby = async () => {
     if (selectedGame === null) {
@@ -45,21 +50,10 @@ const Landing: React.FC = () => {
 
     setIsCreatingLobby(true);
     try {
-      const response = await fetch(buildApiUrl("/lobbies/"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ownerId: "u_owner_" + Math.random().toString(36).slice(2, 8),
-          ownerName: "OwnerName",
-          gameType: selectedGame, // Include the selected game type
-        }),
-      });
-      const data = await response.json();
+      const data = await api.createLobby();
 
       // Set owner data and navigate to lobby
       localStorage.setItem("isOwner", "true");
-      localStorage.setItem("playerId", data.ownerId);
-      localStorage.setItem("playerName", "OwnerName");
       localStorage.setItem("roomCode", data.roomCode);
 
       navigate(`/lobby/${data.roomCode}`);
@@ -85,20 +79,10 @@ const Landing: React.FC = () => {
 
     setIsJoiningLobby(true);
     try {
-      const response = await fetch(buildApiUrl(`/lobbies/${roomCode}/join`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          playerId: "u_guest_" + Math.random().toString(36).slice(2, 8),
-          name: "Guest-" + Math.random().toString(36).slice(2, 6),
-        }),
-      });
-      const data = await response.json();
+      await api.joinLobby(roomCode);
 
       // Set guest data and navigate to lobby
       localStorage.setItem("isOwner", "false");
-      localStorage.setItem("playerId", data.joined);
-      localStorage.setItem("playerName", data.name || "Guest");
       localStorage.setItem("roomCode", roomCode);
 
       navigate(`/lobby/${roomCode}`);

@@ -2,14 +2,15 @@
 
 import { buildApiUrl } from "../config/api";
 
+// Legacy functions - these will be replaced by authenticated versions
+// Keeping for backward compatibility during transition
+
 export async function submitWord(
   gameId: string,
   playerId: string,
   path: number[][],
 ) {
   const url = buildApiUrl(`/games/${gameId}/submit`);
-  console.log("API call to:", url);
-  console.log("Request body:", { playerId, path });
 
   const res = await fetch(url, {
     method: "POST",
@@ -17,7 +18,6 @@ export async function submitWord(
     body: JSON.stringify({ playerId, path }),
   });
 
-  console.log("Response status:", res.status);
   if (!res.ok) throw new Error(`submit failed: ${res.status}`);
   return res.json();
 }

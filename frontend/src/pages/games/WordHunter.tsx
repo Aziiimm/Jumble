@@ -1,19 +1,24 @@
 // src/pages/games/WordHunter.tsx
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import { useLobbySocket } from "@/hooks/useLobbySocket";
-import { submitWord } from "@/services/api";
-import { buildApiUrl } from "@/config/api";
+import { createAuthenticatedApiFunctions } from "@/services/authenticatedApi";
 import { isValidWord } from "@/utils/gameUtils";
 
 import { MdPeopleAlt } from "react-icons/md";
 import { FaTrophy, FaHourglassHalf } from "react-icons/fa";
 import { Spinner } from "@/components/ui/spinner";
 
-const dog =
-  "https://www.nylabone.com/-/media/project/oneweb/nylabone/images/dog101/10-intelligent-dog-breeds/golden-retriever-tongue-out.jpg?h=430&w=710&hash=7FEB820D235A44B76B271060E03572C7";
+const defaultProfilePicture = "/default_profile.png";
 
 interface FoundWord {
   word: string;
@@ -23,20 +28,74 @@ interface FoundWord {
 const WordHunter: React.FC = () => {
   const { id: gameId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { getAccessTokenSilently, user } = useAuth0();
 
-  // TEMPORARY PLAYER ID (UNTIL AUTH IS DONE): use a fixed id/name per browser tab
-  const playerId =
-    localStorage.getItem("playerId") ||
-    (() => {
-      const v = "u_" + Math.random().toString(36).slice(2, 8);
-      localStorage.setItem("playerId", v);
-      return v;
-    })();
+  // Create API once and memoize it
+  const api = useMemo(() => {
+    try {
+      const apiInstance = createAuthenticatedApiFunctions(
+        getAccessTokenSilently,
+      );
+      // console.log("API created successfully:", apiInstance);
+      // console.log("submitWord function exists:", typeof apiInstance.submitWord);
+      return apiInstance;
+    } catch (error) {
+      console.error("Error creating API:", error);
+      return null;
+    }
+  }, [getAccessTokenSilently]);
 
   // Socket: live game info (board/startTs/duration) + live scores
-  const onGameEnded = useCallback(() => {
-    setShowEnded(true); // banner on everyone's client
-  }, []);
+  const onGameEnded = useCallback(
+    (data: {
+      gameId: string;
+      endTs: number;
+      scores: Record<string, number>;
+      names: Record<string, string>;
+    }) => {
+      setShowEnded(true);
+
+      // Determine winner from the scores provided by the backend
+      if (data.scores && Object.keys(data.scores).length > 0) {
+        const scores = data.scores;
+        const scoreValues = Object.values(scores);
+        const maxScore = Math.max(...scoreValues);
+        const winners = Object.keys(scores).filter(
+          (id) => scores[id] === maxScore,
+        );
+
+        if (winners.length === 1) {
+          // Single winner
+          // console.log("Winner:", winners[0], "Score:", scores[winners[0]]);
+          setGameResults({
+            scores: data.scores,
+            names: data.names || {},
+            winner: winners[0],
+          });
+        } else {
+          // Tie - no single winner
+          // console.log(
+          //   "Tie detected:",
+          //   winners.length,
+          //   "players with score",
+          //   maxScore,
+          // );
+          setGameResults({
+            scores: data.scores,
+            names: data.names || {},
+            winner: "tie",
+          });
+        }
+      } else {
+        setGameResults({
+          scores: data.scores || {},
+          names: data.names || {},
+          winner: undefined,
+        });
+      }
+    },
+    [],
+  );
 
   // Listen for game:started from lobby room first, then join game room
   const [lobbyGameData, setLobbyGameData] = useState<any>(null);
@@ -44,11 +103,9 @@ const WordHunter: React.FC = () => {
 
   useLobbySocket(roomCode || "", {
     onGameStartedInLobby: (gameData) => {
-      console.log("Received game:started from lobby:", gameData);
       setLobbyGameData(gameData);
     },
     onReopened: ({ roomCode: reopenedRoomCode }) => {
-      console.log("Lobby reopened, redirecting to lobby:", reopenedRoomCode);
       navigate(`/lobby/${reopenedRoomCode}`);
     },
   });
@@ -59,20 +116,46 @@ const WordHunter: React.FC = () => {
   // Use lobby data if available, otherwise use game socket data
   const started = lobbyGameData || gameStarted;
 
+  // Debug: Log when game state changes
+  useEffect(() => {
+    if (started) {
+    }
+  }, [started]);
+
   // board created on the backend
   const board = started?.board || [];
 
-  // timer
+  // Game end state - declare before timer useEffect
+  const [showEnded, setShowEnded] = useState<boolean>(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  // timer - just for display, game end is handled by socket events
   const [timeLeftMs, setTimeLeftMs] = useState(0);
   useEffect(() => {
     if (!started) return;
     const endTs = started.startTs + started.durationSec * 1000;
     const id = window.setInterval(() => {
-      setTimeLeftMs(Math.max(0, endTs - Date.now()));
+      const timeLeft = Math.max(0, endTs - Date.now());
+      setTimeLeftMs(timeLeft);
     }, 250);
     return () => clearInterval(id);
   }, [started]);
   const secondsLeft = Math.ceil(timeLeftMs / 1000);
+
+  // Fetch user profile for profile picture
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await api?.getUserProfile();
+        setUserProfile(profile?.user);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+    if (api) {
+      fetchUserProfile();
+    }
+  }, [api]);
 
   // End banner + lobby navigation (owner only)
   const roomCodeLabel = localStorage.getItem("roomCode") || "-";
@@ -80,12 +163,17 @@ const WordHunter: React.FC = () => {
 
   const [foundWords, setFoundWords] = useState<FoundWord[]>([]);
   const [currentWord, setCurrentWord] = useState<string>("");
+  const [submittedWords, setSubmittedWords] = useState<Set<string>>(new Set());
   const [selectedTiles, setSelectedTiles] = useState<number[][]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [wordStatus, setWordStatus] = useState<
     "neutral" | "success" | "duplicate"
   >("neutral");
-  const [showEnded, setShowEnded] = useState<boolean>(false);
+  const [gameResults, setGameResults] = useState<{
+    scores: Record<string, number>;
+    names: Record<string, string>;
+    winner?: string;
+  } | null>(null);
 
   const dragStartRef = useRef<number[] | null>(null);
   // const boardRef = useRef<HTMLDivElement>(null);
@@ -117,7 +205,7 @@ const WordHunter: React.FC = () => {
       successSoundRef.current.currentTime = 0; // Reset to start
       successSoundRef.current
         .play()
-        .catch((err: any) => console.log("Audio play failed:", err));
+        .catch((err: any) => console.error("Audio play failed:", err));
     }
   };
 
@@ -149,14 +237,24 @@ const WordHunter: React.FC = () => {
       }
     };
 
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (isDragging) {
+        e.preventDefault();
+      }
+    };
+
     document.addEventListener("mouseup", handleGlobalMouseUp);
     document.addEventListener("mouseleave", handleGlobalMouseLeave);
     document.addEventListener("touchend", handleGlobalTouchEnd);
+    document.addEventListener("touchmove", handleGlobalTouchMove, {
+      passive: false,
+    });
 
     return () => {
       document.removeEventListener("mouseup", handleGlobalMouseUp);
       document.removeEventListener("mouseleave", handleGlobalMouseLeave);
       document.removeEventListener("touchend", handleGlobalTouchEnd);
+      document.removeEventListener("touchmove", handleGlobalTouchMove);
     };
   }, [isDragging]);
 
@@ -235,11 +333,31 @@ const WordHunter: React.FC = () => {
         return;
       }
 
+      // Check for duplicate on frontend first
+      if (submittedWords.has(word.toLowerCase())) {
+        setWordStatus("duplicate");
+        setTimeout(() => setWordStatus("neutral"), 1);
+        setIsDragging(false);
+        setSelectedTiles([]);
+        setCurrentWord("");
+        dragStartRef.current = null;
+        return;
+      }
+
       try {
         // send to backend
-        console.log("Submitting word:", word, "path:", selectedTiles);
-        const resp = await submitWord(gameId!, playerId, selectedTiles);
-        console.log("Submit response:", resp);
+        // console.log("Submitting word:", word, "path:", selectedTiles);
+        // console.log("GameId:", gameId);
+        // console.log("API object:", api);
+        // console.log("submitWord function:", api?.submitWord);
+
+        if (!api || !api.submitWord) {
+          console.error("API or submitWord function is not available");
+          setWordStatus("neutral");
+          return;
+        }
+
+        const resp = await api.submitWord(gameId!, selectedTiles);
 
         if (resp.accepted) {
           // Success feedback
@@ -249,15 +367,20 @@ const WordHunter: React.FC = () => {
             ...prev,
             { word: resp.word, points: resp.points },
           ]);
+          setSubmittedWords((prev) => new Set([...prev, word.toLowerCase()]));
           setWordStatus("success");
         } else {
           // Server rejected
           // reasons: "invalid_path", "not_in_dictionary", "duplicate_word", "too_short"
-          if (resp.reason === "duplicate_word") setWordStatus("duplicate");
-          else setWordStatus("neutral");
+          if (resp.reason === "duplicate_word") {
+            setSubmittedWords((prev) => new Set([...prev, word.toLowerCase()]));
+            setWordStatus("duplicate");
+          } else setWordStatus("neutral");
         }
       } catch (e) {
         console.error("submit failed", e);
+        console.error("Error details:", (e as Error).message);
+        console.error("Error response:", (e as any).response);
         setWordStatus("neutral");
       }
     }
@@ -329,22 +452,17 @@ const WordHunter: React.FC = () => {
     <div className="px-6 pb-20 font-adlam text-[#FCF8CF] sm:pt-10 2xl:h-[80vh]">
       <div className="mx-auto w-full sm:w-10/12 lg:w-11/12 2xl:w-10/12 3xl:w-9/12">
         {showEnded && (
-          <div className="mb-4 min-w-fit items-center place-self-center rounded-lg bg-[#01685e]/80 p-3 text-yellow-100">
+          <div className="mb-4 min-w-fit items-center place-self-center rounded-lg bg-[#01685e] p-3 text-yellow-100">
             Round Over!
             {isOwner && (
               <button
-                className="ml-4 rounded-md bg-yellow-400 px-3 py-1 text-[#876124] hover:bg-yellow-300"
+                className="ml-4 rounded-md bg-[#febd4f] px-3 py-1 text-[#876124] hover:opacity-90"
                 onClick={async () => {
                   try {
                     // Notify all players that lobby is reopened
-                    await fetch(
-                      buildApiUrl(`/lobbies/${roomCodeLabel}/reopen`),
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ ownerId: playerId }),
-                      },
-                    );
+                    if (api?.reopenLobby) {
+                      await api.reopenLobby(roomCodeLabel);
+                    }
                     // Navigate to lobby
                     navigate(`/lobby/${roomCodeLabel}`);
                   } catch (error) {
@@ -360,39 +478,80 @@ const WordHunter: React.FC = () => {
           </div>
         )}
 
-        {/* Current Word Display */}
-        <div className="flex flex-col items-center justify-center gap-2 lg:mb-4">
-          <div
-            className={`inline-block flex min-h-[2.5rem] min-w-[8rem] items-center justify-center rounded-lg px-6 transition-all duration-150 ${
-              wordStatus === "success"
-                ? "scale-105 bg-green-500 shadow-lg"
-                : wordStatus === "duplicate"
-                  ? "scale-105 bg-yellow-500 shadow-lg"
-                  : "bg-[#01685E]"
-            }`}
-          >
-            <span className="text-xl">{currentWord || ""}</span>
+        {/* Winner Display */}
+        {gameResults && gameResults.winner && gameResults.winner !== "tie" && (
+          <div className="mb-4 flex justify-center">
+            <div className="flex items-center space-x-3 rounded-lg bg-[#febd4f] p-3 shadow-md">
+              <FaTrophy className="h-6 w-6 text-[#876124]" />
+              <span className="text-lg font-medium text-[#876124]">
+                Winner:{" "}
+                {gameResults.names[gameResults.winner] || gameResults.winner}
+              </span>
+            </div>
           </div>
+        )}
 
-          {/* Timer */}
-        </div>
-
-        {/* Timer - Right side above grid on md and below, over middle panel on lg+ */}
-        <div className="flex justify-end md:justify-end lg:hidden">
-          <div
-            className={`flex max-w-[6rem] items-center justify-center gap-1 rounded-t-lg px-2 py-1 text-lg font-light transition-transform duration-1000 sm:mb-2 sm:rounded-lg sm:text-2xl ${
-              secondsLeft <= 30 ? "animate-pulse text-red-500" : ""
-            }`}
-          >
-            <FaHourglassHalf
-              className={`text-base sm:text-xl ${secondsLeft <= 30 ? "text-red-500" : ""}`}
-            />
-            <span className={secondsLeft <= 30 ? "text-red-500" : ""}>
-              {Math.floor(secondsLeft / 60)}:
-              {(secondsLeft % 60).toString().padStart(2, "0")}
-            </span>
+        {/* Tie Display */}
+        {gameResults && gameResults.winner === "tie" && (
+          <div className="mb-4 flex justify-center">
+            <div className="flex items-center space-x-3 rounded-lg bg-[#febd4f] p-3 shadow-md">
+              <FaTrophy className="h-6 w-6 text-[#876124]" />
+              <span className="text-lg font-medium text-[#876124]">
+                It's a Tie!
+              </span>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* No Winner Display */}
+        {gameResults && !gameResults.winner && (
+          <div className="mb-4 flex justify-center">
+            <div className="flex items-center space-x-3 rounded-lg bg-gray-400 p-3 shadow-md">
+              <FaTrophy className="h-6 w-6 text-gray-700" />
+              <span className="text-lg font-medium text-gray-700">
+                Game Over - No Winner
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Current Word Display - Hide when game is over */}
+        {!showEnded && (
+          <div className="flex flex-col items-center justify-center gap-2 lg:mb-4">
+            <div
+              className={`inline-block flex min-h-[2.5rem] min-w-[8rem] items-center justify-center rounded-lg px-6 transition-all duration-150 ${
+                wordStatus === "success"
+                  ? "scale-105 bg-green-500 shadow-lg"
+                  : wordStatus === "duplicate"
+                    ? "scale-105 bg-yellow-500 shadow-lg"
+                    : "bg-[#01685E]"
+              }`}
+            >
+              <span className="text-xl">{currentWord || ""}</span>
+            </div>
+
+            {/* Timer */}
+          </div>
+        )}
+
+        {/* Timer - Right side above grid on md and below, over middle panel on lg+ - Hide when game is over */}
+        {!showEnded && (
+          <div className="flex justify-end md:justify-end lg:hidden">
+            <div
+              className={`flex max-w-[6rem] items-center justify-center gap-1 rounded-t-lg px-2 py-1 text-lg font-light transition-transform duration-1000 sm:mb-2 sm:rounded-lg sm:text-2xl ${
+                secondsLeft <= 30 ? "animate-pulse text-red-500" : ""
+              }`}
+            >
+              <FaHourglassHalf
+                className={`text-base sm:text-xl ${secondsLeft <= 30 ? "text-red-500" : ""}`}
+              />
+              <span className={secondsLeft <= 30 ? "text-red-500" : ""}>
+                {Math.floor(secondsLeft / 60)}:
+                {(secondsLeft % 60).toString().padStart(2, "0")}
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           {/* Left Panel - Found Words */}
@@ -432,22 +591,24 @@ const WordHunter: React.FC = () => {
 
           {/* Middle Panel - Game Board */}
           <div className="relative order-1 select-none lg:order-2 lg:col-span-6">
-            {/* Timer - Positioned over the right side of middle panel (lg+ only) */}
-            <div className="absolute right-4 top-4 z-10 hidden lg:block">
-              <div
-                className={`flex max-w-[6rem] items-center justify-center gap-1 rounded-t-lg px-2 py-1 text-lg font-light transition-transform duration-1000 sm:mb-2 sm:rounded-lg sm:text-2xl ${
-                  secondsLeft <= 30 ? "animate-pulse text-red-500" : ""
-                }`}
-              >
-                <FaHourglassHalf
-                  className={`text-base sm:text-xl ${secondsLeft <= 30 ? "text-red-500" : ""}`}
-                />
-                <span className={secondsLeft <= 30 ? "text-red-500" : ""}>
-                  {Math.floor(secondsLeft / 60)}:
-                  {(secondsLeft % 60).toString().padStart(2, "0")}
-                </span>
+            {/* Timer - Positioned over the right side of middle panel (lg+ only) - Hide when game is over */}
+            {!showEnded && (
+              <div className="absolute right-4 top-4 z-10 hidden lg:block">
+                <div
+                  className={`flex max-w-[6rem] items-center justify-center gap-1 rounded-t-lg px-2 py-1 text-lg font-light transition-transform duration-1000 sm:mb-2 sm:rounded-lg sm:text-2xl ${
+                    secondsLeft <= 30 ? "animate-pulse text-red-500" : ""
+                  }`}
+                >
+                  <FaHourglassHalf
+                    className={`text-base sm:text-xl ${secondsLeft <= 30 ? "text-red-500" : ""}`}
+                  />
+                  <span className={secondsLeft <= 30 ? "text-red-500" : ""}>
+                    {Math.floor(secondsLeft / 60)}:
+                    {(secondsLeft % 60).toString().padStart(2, "0")}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
             <div className="flex flex-col rounded-2xl bg-[#01685e] px-4 py-6 shadow-xl sm:h-[600px] sm:px-6">
               {/* Game Board - Centered with reduced spacing */}
               <div className="flex items-center justify-center sm:flex-1">
@@ -525,7 +686,6 @@ const WordHunter: React.FC = () => {
                             handleTileMouseDown(rowIndex, colIndex)
                           }
                           onTouchMove={(e) => {
-                            e.preventDefault();
                             const touch = e.touches[0];
                             const element = document.elementFromPoint(
                               touch.clientX,
@@ -557,17 +717,6 @@ const WordHunter: React.FC = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Game Instructions */}
-              {/* <div className="mt-4 flex-shrink-0 text-center text-sm text-[#b1dfbc]">
-                <p className="hidden sm:block">
-                  Click and drag to connect adjacent letters and form words!
-                </p>
-                <p className="sm:hidden">
-                  Tap and drag to connect adjacent letters and form words!
-                </p>
-                <p>Words must be at least 3 letters long.</p>
-              </div> */}
             </div>
           </div>
 
@@ -587,26 +736,36 @@ const WordHunter: React.FC = () => {
               <div className="flex h-[400px] overflow-hidden sm:h-[500px]">
                 {/* Hidden scrollbar but keeps scroll functionality */}
                 <div className="scrollbar-hide w-full space-y-3 overflow-y-auto">
-                  {(started?.players ?? []).map((pid: string) => (
-                    <div
-                      key={pid}
-                      className="flex flex-shrink-0 items-center space-x-3 rounded-lg bg-[#febd4f] p-2 shadow-md"
-                    >
-                      <img
-                        src={dog}
-                        alt={names[pid] || pid}
-                        className="h-12 w-12 rounded-full object-cover"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[#876124]">
-                          {names[pid] || pid}
+                  {(started?.players ?? []).map((pid: string) => {
+                    // Use profile picture for current user, default for others
+                    const profilePicture =
+                      pid === user?.sub && userProfile?.profile_picture
+                        ? userProfile.profile_picture !== defaultProfilePicture
+                          ? userProfile.profile_picture
+                          : user?.picture || defaultProfilePicture
+                        : defaultProfilePicture;
+
+                    return (
+                      <div
+                        key={pid}
+                        className="flex flex-shrink-0 items-center space-x-3 rounded-lg bg-[#febd4f] p-2 shadow-md"
+                      >
+                        <img
+                          src={profilePicture}
+                          alt={names[pid] || pid}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[#876124]">
+                            {names[pid] || pid}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-[#876124]">
+                          {<FaTrophy />} {scores?.[pid] ?? 0}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-[#876124]">
-                        {<FaTrophy />} {scores?.[pid] ?? 0}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

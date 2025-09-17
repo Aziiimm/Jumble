@@ -1,6 +1,6 @@
 // src/hooks/useLobbySocket.ts
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { socket } from "@/lib/socket";
 import { buildApiUrl } from "@/config/api";
 import type { LobbySnapshot, GameStarted } from "@/types/realtime";
@@ -17,21 +17,15 @@ export function useLobbySocket(
 ) {
   const [snapshot, setSnapshot] = useState<LobbySnapshot | null>(null);
 
-  const join = useCallback(() => {
-    if (!roomCode) return;
-    socket.emit("lobby:join", { roomCode });
-  }, [roomCode]);
-
-  const leave = useCallback(() => {
-    if (!roomCode) return;
-    socket.emit("lobby:leave", { roomCode });
-  }, [roomCode]);
+  // Use refs to store callbacks to prevent re-renders
+  const optsRef = useRef(opts);
+  optsRef.current = opts;
 
   useEffect(() => {
     if (!roomCode) return;
 
     // Join the lobby room
-    join();
+    socket.emit("lobby:join", { roomCode });
 
     // Fetch the current lobby state as a fallback (only once)
     const fetchLobbyState = async () => {
@@ -59,22 +53,17 @@ export function useLobbySocket(
       }
     };
     const onClosed = (d: { roomCode: string; gameId: string }) => {
-      if (d.roomCode === roomCode) opts.onClosed?.(d);
+      if (d.roomCode === roomCode) optsRef.current.onClosed?.(d);
     };
     const onReopened = (d: { roomCode: string }) => {
-      console.log("Received lobby:reopened event:", d);
-      console.log("Current roomCode:", roomCode);
       if (d.roomCode === roomCode) {
-        console.log("Calling onReopened callback");
-        opts.onReopened?.(d);
+        optsRef.current.onReopened?.(d);
       } else {
-        console.log("Room code mismatch, ignoring reopen event");
       }
     };
     const onGameStarted = (d: GameStarted) => {
-      console.log("Lobby socket received game:started:", d);
       // some UIs may want to see board/timers without switching page yet
-      opts.onGameStartedInLobby?.(d);
+      optsRef.current.onGameStartedInLobby?.(d);
     };
 
     socket.on("lobby:update", onUpdate);
@@ -84,12 +73,12 @@ export function useLobbySocket(
 
     return () => {
       clearTimeout(timeoutId);
-      leave();
+      socket.emit("lobby:leave", { roomCode });
       socket.off("lobby:update", onUpdate);
       socket.off("lobby:closed", onClosed);
       socket.off("lobby:reopened", onReopened);
       socket.off("game:started", onGameStarted);
     };
-  }, [roomCode, join, leave, opts]);
-  return { snapshot, join, leave };
+  }, [roomCode]); // Only depend on roomCode
+  return { snapshot };
 }

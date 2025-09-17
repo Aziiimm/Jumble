@@ -17,20 +17,21 @@ export function initSockets(httpServer) {
 
   io.on("connection", (socket) => {
     // logging for testing
-    console.log("[ws] connected:", socket.id);
+    // console.log("[ws] connected:", socket.id);
 
     // client asks to join a lobby room
     socket.on("lobby:join", ({ roomCode }) => {
-      console.log("[ws] lobby:join", socket.id, roomCode);
+      // console.log("[ws] lobby:join", socket.id, roomCode);
       if (typeof roomCode !== "string" || !roomCode) return;
       socket.join(`lobby:${roomCode}`);
       socket.emit("lobby:joined", { roomCode });
     });
 
     socket.on("game:join", ({ gameId }) => {
-      console.log("[ws] game:join", socket.id, gameId);
+      // console.log("[ws] game:join", socket.id, gameId);
       if (typeof gameId !== "string" || !gameId.startsWith("g_")) return;
       socket.join(`game:${gameId}`);
+      // console.log(`[ws] Socket ${socket.id} joined game room: game:${gameId}`);
       socket.emit("game:joined", { gameId });
     });
 
@@ -49,7 +50,7 @@ export function initSockets(httpServer) {
     });
 
     socket.on("disconnect", (reason) => {
-      console.log("[ws] disconnected:", socket.id, reason);
+      // console.log("[ws] disconnected:", socket.id, reason);
     });
   });
 
@@ -65,6 +66,7 @@ export function emitToLobby(roomCode, event, payload) {
 
 export function emitToGame(gameId, event, payload) {
   if (!io) return;
+  // console.log(`[ws] Emitting ${event} to game:${gameId}`, payload);
   io.to(`game:${gameId}`).emit(event, payload);
 }
 

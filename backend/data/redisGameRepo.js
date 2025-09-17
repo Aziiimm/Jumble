@@ -142,14 +142,30 @@ export async function addSubmittedWord(gameId, playerId, word) {
 export async function incrementPlayerScore(gameId, playerId, score) {
   await ensureRedis();
   const key = `game:${gameId}:scores`;
+
+  // Debug: incrementPlayerScore called
+  // console.log("=== incrementPlayerScore ===");
+  // console.log("GameId:", gameId);
+  // console.log("PlayerId:", playerId);
+  // console.log("Score to add:", score);
+
   // make sure the field exists, init if not
   const exists = await redis.hExists(key, playerId);
+  // console.log("Player exists in scores:", exists);
+
   if (!exists) {
     await redis.hSet(key, { [playerId]: 0 });
     await redis.expire(key, DEFAULT_TTL);
+    // console.log("Initialized player score to 0");
   }
 
   const newScore = await redis.hIncrBy(key, playerId, Number(score) || 0);
+  // console.log("New score after increment:", newScore);
+
+  // Get all scores to verify
+  // const allScores = await redis.hGetAll(key);
+  // console.log("All scores after increment:", allScores);
+
   return Number(newScore);
 }
 

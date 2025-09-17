@@ -1,156 +1,86 @@
 // src/pages/Leaderboard.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { createAuthenticatedApiFunctions } from "@/services/authenticatedApi";
+import { Spinner } from "@/components/ui/spinner";
 
 type GameType = "overall" | "wordhunter" | "timebomb";
 
 interface Player {
-  id: number;
+  sub: string;
   name: string;
-  overallWins: number;
-  wordHunterWins: number;
-  timebombWins: number;
+  wins: number;
+  wordhunt_wins: number;
+  timebomb_wins: number;
+  overall_wins: number;
   avatar?: string;
 }
 
-// Mock data
-const mockPlayers: Player[] = [
-  {
-    id: 1,
-    name: "WordMaster",
-    overallWins: 45,
-    wordHunterWins: 42,
-    timebombWins: 3,
-  },
-  {
-    id: 2,
-    name: "SpeedDemon",
-    overallWins: 38,
-    wordHunterWins: 20,
-    timebombWins: 18,
-  },
-  {
-    id: 3,
-    name: "PuzzlePro",
-    overallWins: 32,
-    wordHunterWins: 28,
-    timebombWins: 4,
-  },
-  {
-    id: 4,
-    name: "GameChamp",
-    overallWins: 29,
-    wordHunterWins: 25,
-    timebombWins: 4,
-  },
-  {
-    id: 5,
-    name: "VictoryKing",
-    overallWins: 26,
-    wordHunterWins: 22,
-    timebombWins: 4,
-  },
-  {
-    id: 6,
-    name: "WordWizard",
-    overallWins: 24,
-    wordHunterWins: 24,
-    timebombWins: 0,
-  },
-  {
-    id: 7,
-    name: "QuickDraw",
-    overallWins: 21,
-    wordHunterWins: 8,
-    timebombWins: 13,
-  },
-  {
-    id: 8,
-    name: "BrainBox",
-    overallWins: 19,
-    wordHunterWins: 19,
-    timebombWins: 0,
-  },
-  {
-    id: 9,
-    name: "FastFingers",
-    overallWins: 17,
-    wordHunterWins: 5,
-    timebombWins: 12,
-  },
-  {
-    id: 10,
-    name: "LexiconLover",
-    overallWins: 15,
-    wordHunterWins: 15,
-    timebombWins: 0,
-  },
-  {
-    id: 11,
-    name: "TimingTitan",
-    overallWins: 13,
-    wordHunterWins: 2,
-    timebombWins: 11,
-  },
-  {
-    id: 12,
-    name: "VocabularyVic",
-    overallWins: 12,
-    wordHunterWins: 12,
-    timebombWins: 0,
-  },
-  {
-    id: 13,
-    name: "BombSquad",
-    overallWins: 11,
-    wordHunterWins: 1,
-    timebombWins: 10,
-  },
-  {
-    id: 14,
-    name: "LetterLegend",
-    overallWins: 9,
-    wordHunterWins: 9,
-    timebombWins: 0,
-  },
-  {
-    id: 15,
-    name: "RapidRunner",
-    overallWins: 8,
-    wordHunterWins: 3,
-    timebombWins: 5,
-  },
-];
-
 const Leaderboard: React.FC = () => {
   const [filter, setFilter] = useState<GameType>("overall");
+  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { getAccessTokenSilently } = useAuth0();
+
+  // Memoize API object to prevent constant recreation
+  const api = useMemo(() => {
+    return createAuthenticatedApiFunctions(getAccessTokenSilently);
+  }, [getAccessTokenSilently]);
+
+  // Fetch all leaderboard data once when component mounts
+  useEffect(() => {
+    const fetchAllLeaderboardData = async () => {
+      try {
+        setIsLoading(true);
+        // Fetch overall leaderboard data (which contains all game types)
+        const response = await api.getLeaderboard("overall");
+        // Handle the API response structure: {success: true, players: [...]}
+        const data = response.success ? response.players : [];
+        setAllPlayers(data);
+      } catch (error) {
+        console.error("Error fetching leaderboard:", error);
+        setAllPlayers([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAllLeaderboardData();
+  }, [api]);
 
   const getSortedPlayers = () => {
-    return [...mockPlayers].sort((a, b) => {
-      switch (filter) {
-        case "wordhunter":
-          return b.wordHunterWins - a.wordHunterWins;
-        case "timebomb":
-          return b.timebombWins - a.timebombWins;
-        default:
-          return b.overallWins - a.overallWins;
-      }
+    return [...allPlayers].sort((a, b) => {
+      const aWins = getPlayerWins(a);
+      const bWins = getPlayerWins(b);
+      return bWins - aWins;
     });
   };
 
   const getPlayerWins = (player: Player) => {
     switch (filter) {
       case "wordhunter":
-        return player.wordHunterWins;
+        return player.wordhunt_wins;
       case "timebomb":
-        return player.timebombWins;
+        return player.timebomb_wins;
       default:
-        return player.overallWins;
+        return player.overall_wins;
     }
   };
 
   const sortedPlayers = getSortedPlayers();
   const topThree = sortedPlayers.slice(0, 3);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center font-adlam text-white">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner />
+          <p className="text-lg">Loading leaderboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -265,7 +195,7 @@ const Leaderboard: React.FC = () => {
               <div className="scrollbar-hide h-64 space-y-2 overflow-y-auto sm:h-80 md:h-96">
                 {sortedPlayers.map((player, index) => (
                   <div
-                    key={player.id}
+                    key={player.sub}
                     className="flex items-center justify-between rounded-xl bg-[#fcf8cf] p-3 text-[#876124] transition duration-150 ease-in-out hover:bg-[#f5f0c0] sm:p-4"
                   >
                     <div className="flex items-center gap-2 sm:gap-4">

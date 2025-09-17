@@ -1,23 +1,34 @@
 // src/pages/games/LobbyPage.tsx
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import { useLobbySocket } from "@/hooks/useLobbySocket";
 import { Spinner } from "@/components/ui/spinner";
-import { buildApiUrl } from "@/config/api";
+import { createAuthenticatedApiFunctions } from "@/services/authenticatedApi";
+import { useUser } from "@/contexts/UserContext";
 import { FaCrown, FaUser } from "react-icons/fa6";
+
+const defaultProfilePicture = "/default_profile.png";
 
 export default function LobbyPage() {
   const { code } = useParams<{ code: string }>(); // route like /lobby/:code
   const navigate = useNavigate();
   const [isStarting, setIsStarting] = useState(false);
+  const { getAccessTokenSilently, user } = useAuth0();
+  const { userProfile } = useUser();
 
   const isOwner = localStorage.getItem("isOwner") === "true";
-  const playerId = localStorage.getItem("playerId");
+  const playerId = user?.sub; // Use Auth0 user ID instead of localStorage
+
+  // Memoize API object to prevent constant recreation
+  const api = useMemo(() => {
+    return createAuthenticatedApiFunctions(getAccessTokenSilently);
+  }, [getAccessTokenSilently]);
 
   const { snapshot } = useLobbySocket(code || "", {
     onClosed: ({ gameId }) => {
-      console.log("Lobby closed, navigating to game:", gameId);
+      // console.log("Lobby closed, navigating to game:", gameId);
       // navigate all players to the game screen
       navigate(`/wordhunter/${gameId}`);
     },
@@ -28,18 +39,7 @@ export default function LobbyPage() {
 
     setIsStarting(true);
     try {
-      const response = await fetch(buildApiUrl(`/lobbies/${code}/start`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerId: playerId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to start game");
-      }
-
-      const data = await response.json();
-      console.log("Game started:", data);
+      await api.startLobby(code);
       // The onClosed callback will handle navigation
     } catch (error) {
       console.error("Error starting game:", error);
@@ -73,31 +73,43 @@ export default function LobbyPage() {
             Players ({snapshot.members?.length || 0}/8)
           </h2>
           <div className="space-y-3">
-            {snapshot.members?.map((id) => (
-              <div
-                key={id}
-                className={`flex items-center rounded-lg bg-white/10 p-3`}
-              >
-                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 font-bold text-white">
-                  {snapshot.names?.[id]?.charAt(0) || id.charAt(0)}
+            {snapshot.members?.map((id) => {
+              // Use profile picture for current user, default for others
+              const profilePicture =
+                id === playerId && userProfile?.profile_picture
+                  ? userProfile.profile_picture !== defaultProfilePicture
+                    ? userProfile.profile_picture
+                    : user?.picture || defaultProfilePicture
+                  : defaultProfilePicture;
+
+              return (
+                <div
+                  key={id}
+                  className={`flex items-center rounded-lg bg-white/10 p-3`}
+                >
+                  <img
+                    src={profilePicture}
+                    alt={snapshot.names?.[id] || id}
+                    className="mr-3 h-10 w-10 rounded-full object-cover"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium text-white">
+                      {snapshot.names?.[id] || id}
+                    </p>
+                  </div>
+                  {id === snapshot.ownerId && (
+                    <span className="rounded-full bg-yellow-500 px-1 py-1 text-yellow-900">
+                      <FaCrown />
+                    </span>
+                  )}
+                  {id !== snapshot.ownerId && id === playerId && (
+                    <span className="rounded-full bg-green-300 px-1 py-1 text-green-900">
+                      <FaUser />
+                    </span>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-white">
-                    {snapshot.names?.[id] || id}
-                  </p>
-                </div>
-                {id === snapshot.ownerId && (
-                  <span className="rounded-full bg-yellow-500 px-1 py-1 text-yellow-900">
-                    <FaCrown />
-                  </span>
-                )}
-                {id !== snapshot.ownerId && id === playerId && (
-                  <span className="rounded-full bg-green-300 px-1 py-1 text-green-900">
-                    <FaUser />
-                  </span>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

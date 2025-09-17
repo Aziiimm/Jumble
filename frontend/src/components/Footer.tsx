@@ -23,7 +23,6 @@ const Footer: React.FC = () => {
       <div className="container grid w-7/12 grid-cols-1 gap-8 md:w-8/12 md:grid-cols-3 lg:w-9/12 xl:w-10/12 2xl:w-8/12">
         {/* Socials Section */}
         <div className="flex flex-col">
-          {/* <img src={logo} className="mb-4 w-1/3" /> */}
           <label className="mb-4 text-3xl underline">Jumble</label>
           <div className="flex space-x-6">
             <a
@@ -42,18 +41,6 @@ const Footer: React.FC = () => {
             >
               <FaDiscord className="text-3xl transition duration-150 ease-in-out hover:opacity-80" />
             </a>
-            {/* <a
-              href="https://www.linkedin.com/in/azim-rahat/"
-              target="_blank"
-              onClick={(e) => {
-                e.preventDefault();
-                window.open("https://www.linkedin.com/in/azim-rahat/");
-                window.location.href =
-                  "https://www.linkedin.com/in/ivan-chen11/";
-              }}
-            >
-              <FaLinkedin className="text-3xl transition duration-150 ease-in-out hover:opacity-80" />
-            </a> */}
           </div>
         </div>
 
@@ -67,18 +54,8 @@ const Footer: React.FC = () => {
               </Link>
             </li>
             <li>
-              <Link to="/register" className="hover:underline">
-                Register
-              </Link>
-            </li>
-            <li>
               <Link to="/leaderboard" className="hover:underline">
-                Leaderboard
-              </Link>
-            </li>
-            <li>
-              <Link to="/about" className="hover:underline">
-                About Us
+                Leaderboards
               </Link>
             </li>
           </ul>

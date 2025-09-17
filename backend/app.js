@@ -12,27 +12,35 @@ import { redisOk } from "./redis.js";
 import gamesRouter from "./routes/games.routes.js";
 import { dictStats, initDictionary } from "./services/dictionary.service.js";
 import lobbiesRouter from "./routes/lobbies.routes.js";
+import usersRouter from "./routes/users.routes.js";
 import { getIO } from "./realtime/sockets.js";
+import { checkJwt, extractUser, requireAuth } from "./auth.js";
 
 const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
 app.use(express.json());
 
+// Simple request logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// No global authentication middleware - apply auth only to specific routes that need it
 
 // Example route
 app.get("/", (req, res) => {
   res.send("Welcome to jumble");
 });
-
-
 
 //test db connection: health check that pings Postgres
 app.get("/health", async (_req, res) => {
@@ -68,20 +76,48 @@ app.get("/health/ws", (_req, res) => {
   res.json({ ok: Boolean(io), service: "socket.io" });
 });
 
-//test db for inital setup
-app.get("/users", async (_req, res, next) => {
-  try {
-    const { rows } = await pool.query(
-      "SELECT id, email, created_at FROM users ORDER BY id LIMIT 50"
-    );
-    res.json(rows);
-  } catch (e) {
-    next(e);
+// Protected route - get current user info
+app.get(
+  "/users/me",
+  checkJwt,
+  extractUser,
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      console.log(`🔍 GET /users/me - User: ${req.user?.sub || "Unknown"}`);
+
+      res.json({
+        success: true,
+        user: req.user,
+      });
+    } catch (e) {
+      console.error(`❌ GET /users/me - Error:`, e.message);
+      next(e);
+    }
   }
-});
+);
+
+// Admin route - get all users (for testing)
+app.get(
+  "/users",
+  checkJwt,
+  extractUser,
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const { rows } = await pool.query(
+        "SELECT sub, email, display_name, created_at FROM users ORDER BY created_at DESC LIMIT 50"
+      );
+      res.json(rows);
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 app.use("/games", gamesRouter);
 app.use("/lobbies", lobbiesRouter);
+app.use("/users", usersRouter);
 
 // Global error handler — for consistent error responses
 app.use((err, req, res, next) => {

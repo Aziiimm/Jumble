@@ -24,60 +24,65 @@ import { Toaster } from "./components/ui/toaster";
 // auth
 import Auth0ProviderWithNavigate from "./auth/auth0";
 
+// contexts
+import { UserProvider } from "./contexts/UserContext";
+
 const App: React.FC = () => {
   return (
     <Auth0ProviderWithNavigate>
-      <Router>
-        <Routes>
-          {/* main layout stuff */}
-          <Route element={<MainLayout />}>
-            {/* Public routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
+      <UserProvider>
+        <Router>
+          <Routes>
+            {/* main layout stuff */}
+            <Route element={<MainLayout />}>
+              {/* Public routes */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
 
-            {/* Protected routes */}
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/leaderboard"
-              element={
-                <ProtectedRoute>
-                  <Leaderboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected routes */}
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <Leaderboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Protected game routes */}
-            <Route
-              path="/wordhunter/:id"
-              element={
-                <ProtectedRoute>
-                  <WordHunter />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/lobby/:code"
-              element={
-                <ProtectedRoute>
-                  <LobbyPage />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected game routes */}
+              <Route
+                path="/wordhunter/:id"
+                element={
+                  <ProtectedRoute>
+                    <WordHunter />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lobby/:code"
+                element={
+                  <ProtectedRoute>
+                    <LobbyPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* for page not found */}
-            <Route path="*" element={<Error />} />
-          </Route>
-        </Routes>
-      </Router>
-      {/* need for toast notification */}
-      <Toaster />
+              {/* for page not found */}
+              <Route path="*" element={<Error />} />
+            </Route>
+          </Routes>
+        </Router>
+        {/* need for toast notification */}
+        <Toaster />
+      </UserProvider>
     </Auth0ProviderWithNavigate>
   );
 };
