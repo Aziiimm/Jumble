@@ -5,6 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useGameSocket } from "@/hooks/useGameSocket";
 import { useLobbySocket } from "@/hooks/useLobbySocket";
 import { submitWord } from "@/services/api";
+import { buildApiUrl } from "@/config/api";
 import { isValidWord } from "@/utils/gameUtils";
 
 import { MdPeopleAlt } from "react-icons/md";
@@ -337,7 +338,7 @@ const WordHunter: React.FC = () => {
                   try {
                     // Notify all players that lobby is reopened
                     await fetch(
-                      `http://localhost:3000/lobbies/${roomCodeLabel}/reopen`,
+                      buildApiUrl(`/lobbies/${roomCodeLabel}/reopen`),
                       {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },

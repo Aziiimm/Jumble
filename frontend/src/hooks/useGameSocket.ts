@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { socket } from "@/lib/socket";
+import { buildApiUrl } from "@/config/api";
 import type { GameStarted, GameScore, GameEnded } from "@/types/realtime";
 
 type UseGameSocketOpts = {
@@ -61,9 +62,7 @@ export function useGameSocket(
     // Fallback: fetch game state directly if socket event is missed
     const fetchGameState = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:3000/games/${gameId}/state`,
-        );
+        const response = await fetch(buildApiUrl(`/games/${gameId}/state`));
         if (response.ok) {
           const data = await response.json();
           if (data.status === "running" && data.board) {

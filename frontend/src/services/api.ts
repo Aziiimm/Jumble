@@ -1,11 +1,13 @@
 // src/services/api.ts
 
+import { buildApiUrl } from "../config/api";
+
 export async function submitWord(
   gameId: string,
   playerId: string,
   path: number[][],
 ) {
-  const url = `http://localhost:3000/games/${gameId}/submit`;
+  const url = buildApiUrl(`/games/${gameId}/submit`);
   console.log("API call to:", url);
   console.log("Request body:", { playerId, path });
 
@@ -21,7 +23,8 @@ export async function submitWord(
 }
 
 export async function finishGame(gameId: string) {
-  const res = await fetch(`http://localhost:3000/games/${gameId}/finish`, {
+  const url = buildApiUrl(`/games/${gameId}/finish`);
+  const res = await fetch(url, {
     method: "POST",
   });
   if (!res.ok) throw new Error(`finish failed: ${res.status}`);

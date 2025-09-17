@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useLobbySocket } from "@/hooks/useLobbySocket";
 import { Spinner } from "@/components/ui/spinner";
+import { buildApiUrl } from "@/config/api";
 import { FaCrown, FaUser } from "react-icons/fa6";
 
 export default function LobbyPage() {
@@ -27,14 +28,11 @@ export default function LobbyPage() {
 
     setIsStarting(true);
     try {
-      const response = await fetch(
-        `http://localhost:3000/lobbies/${code}/start`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ownerId: playerId }),
-        },
-      );
+      const response = await fetch(buildApiUrl(`/lobbies/${code}/start`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ownerId: playerId }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to start game");

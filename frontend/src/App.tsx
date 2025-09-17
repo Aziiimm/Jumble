@@ -9,32 +9,67 @@ import MainLayout from "./layouts/MainLayout";
 // pages
 import Landing from "./pages/Landing";
 import Error from "./pages/Error";
-import Register from "./pages/Register";
 import Login from "./pages/Login";
+import Profile from "./pages/Profile";
 import WordHunter from "./pages/games/WordHunter";
 import LobbyPage from "./pages/games/LobbyPage";
 import Leaderboard from "./pages/Leaderboard";
 
+// components
+import ProtectedRoute from "./components/ProtectedRoute";
+
 // toast
 import { Toaster } from "./components/ui/toaster";
 
-//auth0 protected route test
+// auth
+import Auth0ProviderWithNavigate from "./auth/auth0";
 
 const App: React.FC = () => {
   return (
-    <>
+    <Auth0ProviderWithNavigate>
       <Router>
         <Routes>
           {/* main layout stuff */}
           <Route element={<MainLayout />}>
+            {/* Public routes */}
             <Route path="/" element={<Landing />} />
-            <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
 
-            {/* games */}
-            <Route path="/wordhunter/:id" element={<WordHunter />} />
-            <Route path="/lobby/:code" element={<LobbyPage />} />
+            {/* Protected routes */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaderboard"
+              element={
+                <ProtectedRoute>
+                  <Leaderboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Protected game routes */}
+            <Route
+              path="/wordhunter/:id"
+              element={
+                <ProtectedRoute>
+                  <WordHunter />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lobby/:code"
+              element={
+                <ProtectedRoute>
+                  <LobbyPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* for page not found */}
             <Route path="*" element={<Error />} />
@@ -43,7 +78,7 @@ const App: React.FC = () => {
       </Router>
       {/* need for toast notification */}
       <Toaster />
-    </>
+    </Auth0ProviderWithNavigate>
   );
 };
 

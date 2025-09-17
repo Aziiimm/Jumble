@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { socket } from "@/lib/socket";
+import { buildApiUrl } from "@/config/api";
 import type { LobbySnapshot, GameStarted } from "@/types/realtime";
 
 type UseLobbySocketOpts = {
@@ -35,9 +36,7 @@ export function useLobbySocket(
     // Fetch the current lobby state as a fallback (only once)
     const fetchLobbyState = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:3000/lobbies/${roomCode}`,
-        );
+        const response = await fetch(buildApiUrl(`/lobbies/${roomCode}`));
         if (response.ok) {
           const data = await response.json();
           setSnapshot(data);

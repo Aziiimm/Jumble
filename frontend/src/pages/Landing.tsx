@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 // import { Switch } from "@/components/ui/switch";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
+import { buildApiUrl } from "../config/api";
 
 import banner from "../assets/images/jumble_banner.png";
 import wordhunter from "../assets/images/wordhunter.png";
@@ -16,13 +18,14 @@ const games = [
   },
   {
     id: 2,
-    title: "Timebomb",
+    title: "Timebomb (coming soon)",
     image: timebomb,
   },
 ];
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth0();
   const [roomCode, setRoomCode] = useState("");
   const [isCreatingLobby, setIsCreatingLobby] = useState(false);
   const [isJoiningLobby, setIsJoiningLobby] = useState(false);
@@ -34,9 +37,15 @@ const Landing: React.FC = () => {
       return;
     }
 
+    // Check if user is authenticated, if not redirect to login
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
     setIsCreatingLobby(true);
     try {
-      const response = await fetch("http://localhost:3000/lobbies/", {
+      const response = await fetch(buildApiUrl("/lobbies/"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,19 +77,22 @@ const Landing: React.FC = () => {
       return;
     }
 
+    // Check if user is authenticated, if not redirect to login
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
     setIsJoiningLobby(true);
     try {
-      const response = await fetch(
-        `http://localhost:3000/lobbies/${roomCode}/join`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            playerId: "u_guest_" + Math.random().toString(36).slice(2, 8),
-            name: "Guest-" + Math.random().toString(36).slice(2, 6),
-          }),
-        },
-      );
+      const response = await fetch(buildApiUrl(`/lobbies/${roomCode}/join`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: "u_guest_" + Math.random().toString(36).slice(2, 8),
+          name: "Guest-" + Math.random().toString(36).slice(2, 6),
+        }),
+      });
       const data = await response.json();
 
       // Set guest data and navigate to lobby
@@ -119,6 +131,7 @@ const Landing: React.FC = () => {
             <label className="inline-block w-full py-4 text-center align-middle text-2xl text-[#01685e] lg:text-start">
               Choose a Game
             </label>
+
             <div className="grid w-full grid-cols-2 gap-4 md:px-8 lg:grid-cols-2 lg:px-0">
               {games.map((game) => (
                 <div
@@ -143,14 +156,6 @@ const Landing: React.FC = () => {
             </div>
 
             <div className="pb-10">
-              {/* Play Solo FEATURE FOR THE FUTURE*/}
-              {/* <div className="mt-6 flex w-full justify-between px-4">
-                <label>Play Solo</label>
-                <Switch />
-              </div>
-              <div className="mt-2 w-full px-4 text-xs font-light text-gray-600 hover:cursor-default sm:text-base">
-                You will be matched against an AI player. No account necessary!
-              </div> */}
               <div className="mt-4 flex w-full justify-center">
                 <button
                   onClick={handleCreateLobby}
