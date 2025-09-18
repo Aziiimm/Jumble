@@ -14,12 +14,8 @@ Goal is to make a solid base for more games to be added later.
 
 ## To Dos:
 
-- [ ] Change images, favicon, possibly logo
 - [ ] Change audio for successful input
-- [ ] Leaderboards functionality (routes + frontend page, increment winner's win count on game end)
 - [ ] Adjust Letter Frequency
-- [ ] When auth is implemented, change routes to use req.user.{id, etc as necessary} from middleware
-- [ ] Add Guest Account feature (cannot participate in multiplayer games)
 - [ ] Add Google Analytics
 - [ ] Add CI/CD pipeline
 
