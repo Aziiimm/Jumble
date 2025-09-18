@@ -1,11 +1,14 @@
 // src/pages/Landing.tsx
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 // import { Switch } from "@/components/ui/switch";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
+import { createAuthenticatedApiFunctions } from "../services/authenticatedApi";
 
 import banner from "../assets/images/jumble_banner.png";
 import wordhunter from "../assets/images/wordhunter.png";
+import timebomb from "../assets/images/timebomb.png";
 
 const games = [
   {
@@ -15,35 +18,42 @@ const games = [
   },
   {
     id: 2,
-    title: "Timebomb",
-    image: wordhunter, // Placeholder image, replace with actual Timebomb image
+    title: "Coming Soon!",
+    image: timebomb,
   },
 ];
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
   const [roomCode, setRoomCode] = useState("");
   const [isCreatingLobby, setIsCreatingLobby] = useState(false);
   const [isJoiningLobby, setIsJoiningLobby] = useState(false);
-  const [selectedGame, setSelectedGame] = useState(1); // Default to Word Hunter
+  const [selectedGame, setSelectedGame] = useState<number | null>(null);
+
+  // Memoize API object to prevent constant recreation
+  const api = useMemo(() => {
+    return createAuthenticatedApiFunctions(getAccessTokenSilently);
+  }, [getAccessTokenSilently]);
 
   const handleCreateLobby = async () => {
+    if (selectedGame === null) {
+      alert("Please select a game first!");
+      return;
+    }
+
+    // Check if user is authenticated, if not redirect to login
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
     setIsCreatingLobby(true);
     try {
-      const response = await fetch("http://localhost:3000/lobbies/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ownerId: "u_owner_" + Math.random().toString(36).slice(2, 8),
-          ownerName: "OwnerName",
-        }),
-      });
-      const data = await response.json();
+      const data = await api.createLobby();
 
       // Set owner data and navigate to lobby
       localStorage.setItem("isOwner", "true");
-      localStorage.setItem("playerId", data.ownerId);
-      localStorage.setItem("playerName", "OwnerName");
       localStorage.setItem("roomCode", data.roomCode);
 
       navigate(`/lobby/${data.roomCode}`);
@@ -61,25 +71,18 @@ const Landing: React.FC = () => {
       return;
     }
 
+    // Check if user is authenticated, if not redirect to login
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
     setIsJoiningLobby(true);
     try {
-      const response = await fetch(
-        `http://localhost:3000/lobbies/${roomCode}/join`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            playerId: "u_guest_" + Math.random().toString(36).slice(2, 8),
-            name: "Guest-" + Math.random().toString(36).slice(2, 6),
-          }),
-        },
-      );
-      const data = await response.json();
+      await api.joinLobby(roomCode);
 
       // Set guest data and navigate to lobby
       localStorage.setItem("isOwner", "false");
-      localStorage.setItem("playerId", data.joined);
-      localStorage.setItem("playerName", data.name || "Guest");
       localStorage.setItem("roomCode", roomCode);
 
       navigate(`/lobby/${roomCode}`);
@@ -112,6 +115,7 @@ const Landing: React.FC = () => {
             <label className="inline-block w-full py-4 text-center align-middle text-2xl text-[#01685e] lg:text-start">
               Choose a Game
             </label>
+
             <div className="grid w-full grid-cols-2 gap-4 md:px-8 lg:grid-cols-2 lg:px-0">
               {games.map((game) => (
                 <div
@@ -136,21 +140,17 @@ const Landing: React.FC = () => {
             </div>
 
             <div className="pb-10">
-              {/* Play Solo FEATURE FOR THE FUTURE*/}
-              {/* <div className="mt-6 flex w-full justify-between px-4">
-                <label>Play Solo</label>
-                <Switch />
-              </div>
-              <div className="mt-2 w-full px-4 text-xs font-light text-gray-600 hover:cursor-default sm:text-base">
-                You will be matched against an AI player. No account necessary!
-              </div> */}
               <div className="mt-4 flex w-full justify-center">
                 <button
                   onClick={handleCreateLobby}
-                  disabled={isCreatingLobby}
-                  className="w-full rounded-xl bg-[#01685e] px-4 py-3 text-white transition duration-150 ease-in-out hover:bg-[#014d47] disabled:opacity-50"
+                  disabled={isCreatingLobby || selectedGame === null}
+                  className="w-full rounded-xl bg-[#01685e] px-4 py-3 text-white transition duration-150 ease-in-out hover:bg-[#014d47] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isCreatingLobby ? "Creating..." : "Create Lobby"}
+                  {isCreatingLobby
+                    ? "Creating..."
+                    : selectedGame === null
+                      ? "Select a Game First"
+                      : "Create Lobby"}
                 </button>
               </div>
             </div>

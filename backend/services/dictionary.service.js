@@ -36,9 +36,6 @@ export async function initDictionary() {
   WORDS = set;
   loadedCount = WORDS.size;
   isLoading = false;
-  console.log(
-    `[dict] loaded ${loadedCount.toLocaleString()} words from ${WORDS_FILE}`
-  );
 }
 
 // ensure dictionary is available, if a route calls isValidWord befeore initDictionary() has run, we can lazy init once

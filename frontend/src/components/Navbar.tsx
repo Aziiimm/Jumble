@@ -2,20 +2,17 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useUser } from "../contexts/UserContext";
+import { getProfileIconPath } from "../utils/profileIconUtils";
 
 const Navbar: React.FC = () => {
-  const { isAuthenticated, isLoading, user, loginWithPopup, loginWithRedirect, logout } = useAuth0();
+  const { isAuthenticated, isLoading, user } = useAuth0();
+  const { userProfile, isLoading: isLoadingProfile } = useUser();
 
-  async function handleLogin() {
-    try {
-      await loginWithPopup({
-        authorizationParams: { audience: import.meta.env.VITE_AUTH0_AUDIENCE, scope: "openid profile email", },
-
-      });
-    } catch {
-      await loginWithRedirect();
-    }
-  }
+  const handleLogin = () => {
+    // Navigate to our custom login page instead of using popup/redirect
+    window.location.href = "/login";
+  };
 
   return (
     <nav className="font-adlam text-white">
@@ -29,12 +26,8 @@ const Navbar: React.FC = () => {
         </Link>
 
         {/* right side (login/avatar) */}
-        <div className="space-x-4 md:flex items-center">
-          {/* test to see if protected routes work */}
-          {/* <Link to="/api-check" className="text-sm underline opacity-80 hover:opacity-100">
-            API Test
-          </Link> */}
-          {isLoading ? (
+        <div className="items-center space-x-4 md:flex">
+          {isLoading || isLoadingProfile ? (
             <div className="h-9 w-24 animate-pulse rounded-xl bg-white/20" />
           ) : !isAuthenticated ? (
             <button
@@ -44,25 +37,39 @@ const Navbar: React.FC = () => {
               Log In
             </button>
           ) : (
-            <div className="flex items-center gap-3">
-              {user?.picture && (
-                <img
-                  src={user.picture}
-                  alt={user.name || user.email || "user avatar"}
-                  className="h-8 w-8 rounded-full"
-                  referrerPolicy="no-referrer"
-                />
-              )}
+            <Link
+              to="/profile"
+              className="flex items-center gap-3 rounded-xl bg-[#01685e] px-4 py-2 shadow-lg transition duration-150 ease-in-out hover:brightness-90"
+            >
+              {(() => {
+                // Always use profile icon from database if available, otherwise default icon
+                const profileIcon = userProfile?.profile_icon;
+                const finalSrc = profileIcon
+                  ? getProfileIconPath(profileIcon)
+                  : getProfileIconPath(1); // Default to icon 1
+
+                return (
+                  <img
+                    src={finalSrc}
+                    alt={
+                      userProfile?.display_name ||
+                      user?.name ||
+                      user?.email ||
+                      "user avatar"
+                    }
+                    className="h-8 w-8 rounded-full"
+                    referrerPolicy="no-referrer"
+                  />
+                );
+              })()}
               <span className="hidden text-sm sm:inline">
-                {user?.username || user?.nickname || user?.name || user?.email}
+                {userProfile?.display_name ||
+                  user?.username ||
+                  user?.nickname ||
+                  user?.name ||
+                  user?.email}
               </span>
-              <button
-                onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-                className="rounded-xl bg-[#024e52] px-4 py-2 text-sm shadow-lg transition duration-150 ease-in-out hover:brightness-95"
-              >
-                Logout
-              </button>
-            </div>
+            </Link>
           )}
         </div>
       </div>

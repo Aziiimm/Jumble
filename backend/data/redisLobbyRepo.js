@@ -9,12 +9,13 @@ function lobbyKeys(roomCode) {
     state: `lobby:${roomCode}:state`,
     members: `lobby:${roomCode}:members`,
     names: `lobby:${roomCode}:names`,
+    icons: `lobby:${roomCode}:icons`,
   };
 }
 
-export async function createLobby({ roomCode, ownerId, ownerName }) {
+export async function createLobby({ roomCode, ownerId, ownerName, ownerIcon }) {
   await ensureRedis();
-  const { state, members, names } = lobbyKeys(roomCode);
+  const { state, members, names, icons } = lobbyKeys(roomCode);
 
   // fail if the lobby already exists
   const exists = await redis.exists(state);
@@ -36,25 +37,57 @@ export async function createLobby({ roomCode, ownerId, ownerName }) {
   }
   await redis.expire(names, LOBBY_TTL);
 
+  // create icons hash
+  if (
+    ownerIcon &&
+    typeof ownerIcon === "number" &&
+    ownerIcon >= 1 &&
+    ownerIcon <= 8
+  ) {
+    await redis.hSet(icons, { [ownerId]: ownerIcon });
+  }
+  await redis.expire(icons, LOBBY_TTL);
+
   return { ok: true, state: stateDoc };
 }
 
 export async function loadLobby(roomCode) {
   await ensureRedis();
-  const { state, members, names } = lobbyKeys(roomCode);
+  const { state, members, names, icons } = lobbyKeys(roomCode);
   const raw = await redis.get(state);
   if (!raw) return null;
 
   const stateDoc = JSON.parse(raw);
   const memberIds = await redis.sMembers(members);
   const nameMap = await redis.hGetAll(names);
-  return { state: stateDoc, members: memberIds || [], names: nameMap || {} };
+  const iconMap = await redis.hGetAll(icons);
+
+  // Convert icon values from strings to numbers
+  const convertedIconMap = {};
+  for (const [playerId, iconValue] of Object.entries(iconMap || {})) {
+    const iconNumber = parseInt(iconValue, 10);
+    if (!isNaN(iconNumber) && iconNumber >= 1 && iconNumber <= 8) {
+      convertedIconMap[playerId] = iconNumber;
+    }
+  }
+
+  return {
+    state: stateDoc,
+    members: memberIds || [],
+    names: nameMap || {},
+    icons: convertedIconMap,
+  };
 }
 
-// player join a lobby ( add their id, name, and refreshes the TTL )
-export async function joinLobby({ roomCode, playerId, displayName }) {
+// player join a lobby ( add their id, name, icon, and refreshes the TTL )
+export async function joinLobby({
+  roomCode,
+  playerId,
+  displayName,
+  profileIcon,
+}) {
   await ensureRedis();
-  const { state, members, names } = lobbyKeys(roomCode);
+  const { state, members, names, icons } = lobbyKeys(roomCode);
 
   const raw = await redis.get(state);
   if (!raw) return { ok: false, reason: "not_found" };
@@ -72,18 +105,26 @@ export async function joinLobby({ roomCode, playerId, displayName }) {
   }
   await redis.expire(names, LOBBY_TTL);
 
+  // store/refresh ttl on icon
+  if (typeof profileIcon === "number" && profileIcon >= 1 && profileIcon <= 8) {
+    await redis.hSet(icons, { [playerId]: profileIcon });
+  }
+  await redis.expire(icons, LOBBY_TTL);
+
   // bump state TTL too so the lobby stays alive
   await redis.expire(state, LOBBY_TTL);
 
   // return current snapshot
   const memberIds = await redis.sMembers(members);
   const nameMap = await redis.hGetAll(names);
+  const iconMap = await redis.hGetAll(icons);
 
   return {
     ok: true,
     state: stateDoc,
     members: memberIds || [],
     names: nameMap || {},
+    icons: iconMap || {},
   };
 }
 
@@ -136,24 +177,12 @@ export async function openLobby(roomCode) {
   if (!raw) return { ok: false, reason: "not_found" };
   const doc = JSON.parse(raw);
 
-  console.log("openLobby - Before:", {
-    roomCode,
-    status: doc.status,
-    members: doc.members,
-  });
-
   if (doc.status === "open") return { ok: true, state: doc };
 
   doc.status = "open";
   let ttl = await redis.ttl(state);
   if (ttl < 0) ttl = LOBBY_TTL;
   await redis.set(state, JSON.stringify(doc), { EX: ttl });
-
-  console.log("openLobby - After:", {
-    roomCode,
-    status: doc.status,
-    members: doc.members,
-  });
 
   return { ok: true, state: doc };
 }

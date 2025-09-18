@@ -1,137 +1,78 @@
-# Jumble 🎮
+# Jumble
 
-## Project Scope
+<div align="center">
+  <img src="./frontend/src/assets/images/jumble_banner.png" title="Jumble Banner" width="600" alt="Jumble Banner" />
+</div>
 
-Jumble is a party game web app. The goal is to let people play casual games in real time with friends/AI (similar to jackbox/gamepigeon/jklm). The first game will be called **Word Hunter** (based on Word Hunt from gamepigeon). It will support up to 8 players per room for multiplayer, and track wins with a leaderboard system.
+Live Site: [Jumble](https://jumble-game.vercel.app)
 
-Frontend will be built using React, Tailwind, TypeScript, shadcn/ui. Scaffolding has already been done.
+## Table of Contents
 
-Backend will be built using Node, Database will use PostgreSQL, hosted on AWS RDS in prod. Aiming to use AWS S3 for uplaods, and possibly EC2 for hosting. Docker, Redis, Websockets will be used. Auth method has yet to be decided.
+- [Overview](#overview)
+- [Technologies](#technologies)
+- [Libraries & Methodologies](#libraries--methodologies)
+- [Features](#features)
+- [TODOS/Features to Implement](#todosfeatures-to-implement)
+- [Author Info](#author-info)
 
-Multiplayer will work via room codes (user creates a room, gets a code, others join using it). Leaderboard tracks all-time wins. AI opponent will be require training a ML model (down the line).
+## Overview
 
-Goal is to make a solid base for more games to be added later.
+Welcome to **Jumble**, a real-time multiplayer party game web app inspired by Jackbox and GamePigeon. Players can create rooms with unique codes and invite friends (up to 8 players) to play casual games together. There is a leaderboard functionality where users can track their wins and other stats against all active players. We are looking to add more games in the future so stay tuned!
 
-## To Dos:
+The first game, **Word Hunter**, has players try and form the most words possible on the grid within a time limit.
 
-- [ ] Change images, favicon, possibly logo
-- [ ] Change audio for successful input
-- [ ] Leaderboards functionality (routes + frontend page, increment winner's win count on game end)
-- [ ] Adjust Letter Frequency
-- [ ] When auth is implemented, change routes to use req.user.{id, etc as necessary} from middleware
-- [ ] Add Guest Account feature (cannot participate in multiplayer games)
-- [ ] Add Google Analytics
+<div align="center">
+  <img src="./frontend/src/assets/images/wordhunter.png" title="Word Hunter Game" width="400" alt="Word Hunter Game" />
+</div>
 
-## Database Migrations Workflow
+The second game, **Timebomb**, is currently in the works. Be on the lookout for it!
 
-`npm run migrate:rollback`
+<div align="center">
+  <img src="./frontend/src/assets/images/timebomb.png" title="Game Interface" width="400" alt="Game Interface" />
+</div>
 
-We're going to use Knex migrations to keep our database schemas in sync for development (for prod later on too)
+## Technologies
 
-##### Applying Migrations
+- **Backend:** Node.js, Express.js
+- **Frontend:** React, TypeScript
+- **Database:** PostgreSQL (AWS RDS), Redis (ElastiCache)
+- **Authentication:** Auth0
+- **Real-time:** Socket.io
+- **Styling:** Tailwind CSS
+- **Deployment:** AWS EC2, Vercel
 
-Whenever you need to pull new changes that include a migration (a change to the schema), run:
+## Libraries & Methodologies
 
-`npm run migrate:latest`
+- **Real-time Communication:** Socket.io for live multiplayer gameplay
+- **Authentication:** Auth0 for secure user management
+- **Database Management:** Knex.js for PostgreSQL migrations and queries
+- **Caching:** Redis for game state and lobby management
+- **UI Components:** Radix UI primitives with custom styling
+- **State Management:** React Context for user and game state
 
-This will update your schema to match the latest code's.
+## Features
 
-#### Creating a New Migration
+- **Word Hunter Game**: Find words on a 5x5 letter grid in real-time
+- **Multiplayer Support**: Up to 8 players per room with room codes
+- **Leaderboard System**: Track wins, games played, and other game statistics
+- **Responsive Design**: Works on desktop and mobile devices
+- **Real-time Updates**: Live score updates and game state synchronization
+- **Customizable Profiles**: Edit your profile with different icons, and nicknames!
 
-When you need to modify the schema (ex. adding a new table, add/drop/alter a column):
+## TODOS/Features to Implement
 
-`npm run migrate:make create_games_table`
+- [ ] Add more games (Time Bomb, etc.)
+- [ ] Add Google Analytics for user insights
+- [ ] Implement CI/CD pipeline
+- [ ] Implement AI opponents for single-player mode
+- [ ] Add sound effects and audio feedback
+- [ ] Optimize letter frequency distribution
+- [ ] Create mobile app version
 
-This creates a new file in the `migrations/` folder ( this example is for creating a new games table)
+## Author Info
 
-#### Writing the Migration
+Created by:  
+**Azim Rahat** - [Portfolio](https://azimrahat.com) | [LinkedIn](https://linkedin.com/in/azim-rahat)  
+**Muntaqa Maahi** - [Portfolio](https://muntaqamaahi.com) | [LinkedIn](https://linkedin.com/in/muntaqa-maahi)
 
-Inside the file, define the schema changes in the up function, and how to undo them in the down function, like this:
-
-```
-export async function up(knex) {
-  return knex.schema.createTable('games', (table) => {
-    table.increments('id').primary();
-    table.string('code').notNullable().unique();
-    table.integer('host_id').unsigned().references('id').inTable('users');
-    table.timestamp('created_at').defaultTo(knex.fn.now());
-  });
-}
-
-export async function down(knex) {
-  return knex.schema.dropTableIfExists('games');
-}
-```
-
-#### Changing the schema later
-
-If you need to change something (like renaming or dropping a column), **create a new migration** instead of editing the old one, so we can keep a clear history of everything, and so we can both just run `npm run migrate:latest` after pulling and keep our schemas in sync. Lets say you want to just add a column, instead of editing the migration, just make a new one with that instruction.
-
-`npm run migrate:make add_username_to_users.js`
-
-```
-// /migrations/..._add_usernmame_to_users.js
-export async function up(knex) {
-  return knex.schema.alterTable('users', (table) => {
-    table.string('username').unique();
-  });
-}
-
-export async function down(knex) {
-  return knex.schema.alterTable('users', (table) => {
-    table.dropColumn('username');
-  });
-}
-```
-
-This migration alters the existing users table without recreating or dropping our existing one. Same logic applies for renaming or removing a column. Its important we make new ones instaed of editing old ones to keep our databases in sync. Runs the same sequence of migrations in order.
-
-## Database Seeding Workflow
-
-Seeds will let us populate the database with test data, this is useful so we're working with the same data, and no one has to go through the tedious work of populating the database.
-
-#### Running Seeds
-
-To insert the seed data into your DB, run:
-`npm run seed:run`
-
-This will execute all the seed files in the `seeds/` folder.
-
-#### Creating a Seed File
-
-If you want to define new seed data, make a new seed file:
-
-`npm run seed:make initial_users`
-
-This creates a new file in the `seeds/` folder.
-
-#### Writing a Seed
-
-Here's an example seed file for `users`:
-
-```
-// seeds/initial_users.js
-export async function seed(knex) {
-  // Deletes ALL existing entries
-  await knex('users').del();
-
-  // Inserts seed entries
-  await knex('users').insert([
-    { id: 1, email: 'test@example.com' },
-    { id: 2, email: 'demo@example.com' },
-  ]);
-}
-```
-
-This will clear out the `users` table, then insert those test users.
-
-#### Workflow
-
-We both can just run `npm run seed:run` after pulling new changes with updates to the schema (new migrations) to get the same test data.
-
-## Backend Folder Structure
-
-`/routes` for express route files ()
-`/services` for game logic helpers (such as board generation)
-`/data` for data access (for Redis/Postgres repos)
-`/docs` docs (redis-keys.md, api-contract.md)
+[Back to Top](#jumble-)

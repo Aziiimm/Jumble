@@ -7,32 +7,79 @@
 
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { pool, dbOk } from "./db.js";
 import { redisOk } from "./redis.js";
 import gamesRouter from "./routes/games.routes.js";
 import { dictStats, initDictionary } from "./services/dictionary.service.js";
 import lobbiesRouter from "./routes/lobbies.routes.js";
+import usersRouter from "./routes/users.routes.js";
 import { getIO } from "./realtime/sockets.js";
+import { checkJwt, extractUser, requireAuth } from "./auth.js";
 
 const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" })); // Limit request size
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(limiter);
+
+// Stricter rate limiting for game submissions
+const gameSubmissionLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // limit each IP to 30 game submissions per minute
+  message: "Too many game submissions, please slow down.",
+  skipSuccessfulRequests: true,
+});
+
+// Request logging middleware
+app.use((req, _res, next) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`${req.method} ${req.originalUrl}`);
+  } else {
+    // Production logging - log errors and important events
+    console.log(
+      `${new Date().toISOString()} ${req.method} ${req.originalUrl} - IP: ${
+        req.ip
+      }`
+    );
+  }
+  next();
+});
+
+// No global authentication middleware - apply auth only to specific routes that need it
 
 // Example route
 app.get("/", (req, res) => {
   res.send("Welcome to jumble");
 });
-
-
 
 //test db connection: health check that pings Postgres
 app.get("/health", async (_req, res) => {
@@ -68,20 +115,29 @@ app.get("/health/ws", (_req, res) => {
   res.json({ ok: Boolean(io), service: "socket.io" });
 });
 
-//test db for inital setup
-app.get("/users", async (_req, res, next) => {
-  try {
-    const { rows } = await pool.query(
-      "SELECT id, email, created_at FROM users ORDER BY id LIMIT 50"
-    );
-    res.json(rows);
-  } catch (e) {
-    next(e);
+// Removed conflicting /users/me endpoint - now handled by users.routes.js
+
+// Admin route - get all users (for testing)
+app.get(
+  "/users",
+  checkJwt,
+  extractUser,
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const { rows } = await pool.query(
+        "SELECT sub, email, display_name, created_at FROM users ORDER BY created_at DESC LIMIT 50"
+      );
+      res.json(rows);
+    } catch (e) {
+      next(e);
+    }
   }
-});
+);
 
 app.use("/games", gamesRouter);
 app.use("/lobbies", lobbiesRouter);
+app.use("/users", usersRouter);
 
 // Global error handler — for consistent error responses
 app.use((err, req, res, next) => {

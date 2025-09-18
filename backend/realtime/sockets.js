@@ -10,25 +10,20 @@ let io = null;
 export function initSockets(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: "http://localhost:5173", // vite dev origin
+      origin: process.env.FRONTEND_URL || "http://localhost:5173",
       credentials: true,
     },
   });
 
   io.on("connection", (socket) => {
-    // logging for testing
-    console.log("[ws] connected:", socket.id);
-
     // client asks to join a lobby room
     socket.on("lobby:join", ({ roomCode }) => {
-      console.log("[ws] lobby:join", socket.id, roomCode);
       if (typeof roomCode !== "string" || !roomCode) return;
       socket.join(`lobby:${roomCode}`);
       socket.emit("lobby:joined", { roomCode });
     });
 
     socket.on("game:join", ({ gameId }) => {
-      console.log("[ws] game:join", socket.id, gameId);
       if (typeof gameId !== "string" || !gameId.startsWith("g_")) return;
       socket.join(`game:${gameId}`);
       socket.emit("game:joined", { gameId });
@@ -48,12 +43,9 @@ export function initSockets(httpServer) {
       socket.emit("game:left", { gameId });
     });
 
-    socket.on("disconnect", (reason) => {
-      console.log("[ws] disconnected:", socket.id, reason);
-    });
+    socket.on("disconnect", (reason) => {});
   });
 
-  console.log("[ws] socket.io initialized");
   return io;
 }
 
