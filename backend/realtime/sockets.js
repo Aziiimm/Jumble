@@ -43,7 +43,7 @@ export function initSockets(httpServer) {
       socket.emit("game:left", { gameId });
     });
 
-    socket.on("disconnect", (reason) => {});
+    socket.on("disconnect", (_reason) => {});
   });
 
   return io;

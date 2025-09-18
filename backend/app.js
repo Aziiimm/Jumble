@@ -19,6 +19,9 @@ import { checkJwt, extractUser, requireAuth } from "./auth.js";
 
 const app = express();
 
+// Trust proxy for accurate client IPs
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
