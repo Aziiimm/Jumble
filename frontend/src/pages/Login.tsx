@@ -17,7 +17,7 @@ export default function Login() {
       await loginWithRedirect({
         authorizationParams: {
           connection,
-          audience: import.meta.env.AUTH0_AUDIENCE,
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
         },
       });
     } catch (error) {
@@ -35,7 +35,7 @@ export default function Login() {
       await loginWithRedirect({
         authorizationParams: {
           connection: "Username-Password-Authentication",
-          audience: import.meta.env.AUTH0_AUDIENCE,
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
           login_hint: email,
           screen_hint: isSignUp ? "signup" : "login",
         },
