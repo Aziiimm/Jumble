@@ -1,9 +1,8 @@
 // src/config/api.ts
 
-// Environment-based API configuration
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
+// Use env vars if set, otherwise default to proxy path
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "/api";
 
 export const config = {
   api: {
