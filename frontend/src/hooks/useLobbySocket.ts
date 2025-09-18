@@ -1,6 +1,6 @@
 // src/hooks/useLobbySocket.ts
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { socket } from "@/lib/socket";
 import { buildApiUrl } from "@/config/api";
 import type { LobbySnapshot, GameStarted } from "@/types/realtime";

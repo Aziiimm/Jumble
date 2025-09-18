@@ -93,6 +93,32 @@ export async function getPlayerNames(gameId) {
   return hash;
 }
 
+export async function setPlayerIcon(gameId, playerId, profileIcon) {
+  await ensureRedis();
+  const key = `game:${gameId}:playerIcons`;
+  if (typeof profileIcon === "number" && profileIcon >= 1 && profileIcon <= 8) {
+    await redis.hSet(key, { [playerId]: profileIcon });
+    await redis.expire(key, DEFAULT_TTL);
+  }
+}
+
+export async function getPlayerIcons(gameId) {
+  await ensureRedis();
+  const key = `game:${gameId}:playerIcons`;
+  const hash = await redis.hGetAll(key); // return {} if missing
+
+  // Convert icon values from strings to numbers
+  const convertedHash = {};
+  for (const [playerId, iconValue] of Object.entries(hash || {})) {
+    const iconNumber = parseInt(iconValue, 10);
+    if (!isNaN(iconNumber) && iconNumber >= 1 && iconNumber <= 8) {
+      convertedHash[playerId] = iconNumber;
+    }
+  }
+
+  return convertedHash;
+}
+
 export async function startGame(gameId) {
   await ensureRedis();
 

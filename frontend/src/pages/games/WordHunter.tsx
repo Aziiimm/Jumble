@@ -17,8 +17,7 @@ import { isValidWord } from "@/utils/gameUtils";
 import { MdPeopleAlt } from "react-icons/md";
 import { FaTrophy, FaHourglassHalf } from "react-icons/fa";
 import { Spinner } from "@/components/ui/spinner";
-
-const defaultProfilePicture = "/default_profile.png";
+import { getProfileIconPath } from "@/utils/profileIconUtils";
 
 interface FoundWord {
   word: string;
@@ -737,13 +736,13 @@ const WordHunter: React.FC = () => {
                 {/* Hidden scrollbar but keeps scroll functionality */}
                 <div className="scrollbar-hide w-full space-y-3 overflow-y-auto">
                   {(started?.players ?? []).map((pid: string) => {
-                    // Use profile picture for current user, default for others
-                    const profilePicture =
-                      pid === user?.sub && userProfile?.profile_picture
-                        ? userProfile.profile_picture !== defaultProfilePicture
-                          ? userProfile.profile_picture
-                          : user?.picture || defaultProfilePicture
-                        : defaultProfilePicture;
+                    // Use icon from game data if available, otherwise fall back to current user's icon or default
+                    const profileIcon =
+                      started?.icons?.[pid] ||
+                      (pid === user?.sub && userProfile?.profile_icon) ||
+                      1; // Default icon
+
+                    const profileSrc = getProfileIconPath(profileIcon);
 
                     return (
                       <div
@@ -751,7 +750,7 @@ const WordHunter: React.FC = () => {
                         className="flex flex-shrink-0 items-center space-x-3 rounded-lg bg-[#febd4f] p-2 shadow-md"
                       >
                         <img
-                          src={profilePicture}
+                          src={profileSrc}
                           alt={names[pid] || pid}
                           className="h-12 w-12 rounded-full object-cover"
                         />

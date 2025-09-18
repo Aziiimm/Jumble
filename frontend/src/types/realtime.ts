@@ -6,6 +6,7 @@ export type LobbySnapshot = {
   ownerId: string;
   members: string[];
   names: Record<string, string>;
+  icons: Record<string, number>;
 };
 
 export type GameStarted = {
@@ -13,6 +14,7 @@ export type GameStarted = {
   board: string[][];
   players: string[];
   names: Record<string, string>;
+  icons: Record<string, number>;
   scores: Record<string, number>;
   startTs: number;
   durationSec: number;
@@ -31,4 +33,5 @@ export type GameEnded = {
   endTs: number;
   scores: Record<string, number>;
   names: Record<string, string>;
+  icons: Record<string, number>;
 };

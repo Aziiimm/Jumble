@@ -21,7 +21,9 @@ import {
   addPlayer,
   initPlayerScore,
   setPlayerName,
+  setPlayerIcon,
   getPlayerNames,
+  getPlayerIcons,
   getScores,
   loadState,
   finishGame,
@@ -29,7 +31,10 @@ import {
 } from "../data/redisGameRepo.js";
 import { emitToLobby, emitToGame } from "../realtime/sockets.js";
 import { requireAuth, debugJwt, checkJwt, extractUser } from "../auth.js";
-import { updateUserGamesPlayed } from "../services/user.service.js";
+import {
+  updateUserGamesPlayed,
+  updateUserWinCount,
+} from "../services/user.service.js";
 
 const router = express.Router();
 
@@ -50,12 +55,18 @@ router.post("/", checkJwt, extractUser, requireAuth, async (req, res, next) => {
     console.log(`🏠 POST /lobbies - Creating lobby for user: ${req.user.sub}`);
     const ownerId = req.user.sub;
     const ownerName = req.user.display_name;
+    const ownerIcon = req.user.profile_icon;
 
     // generate a unique room code (retry if collision)
     let attempts = 0;
     let roomCode = makeRoomCode();
     while (attempts < 5) {
-      const created = await createLobby({ roomCode, ownerId, ownerName });
+      const created = await createLobby({
+        roomCode,
+        ownerId,
+        ownerName,
+        ownerIcon,
+      });
       if (created.ok) {
         const lobby = await loadLobby(roomCode);
         return res.status(201).json({
@@ -65,6 +76,7 @@ router.post("/", checkJwt, extractUser, requireAuth, async (req, res, next) => {
           createdAt: lobby.state.createdAt,
           members: lobby.members,
           names: lobby.names,
+          icons: lobby.icons,
         });
       }
 
@@ -92,6 +104,7 @@ router.post(
       const roomCode = req.params.code;
       const playerId = req.user.sub;
       const name = req.user.display_name;
+      const icon = req.user.profile_icon;
 
       console.log(
         `🚪 POST /lobbies/${roomCode}/join - User: ${playerId} joining lobby`
@@ -115,7 +128,12 @@ router.post(
           .json({ message: "lobby is full (max 8 players)" });
       }
 
-      const result = await joinLobby({ roomCode, playerId, displayName: name });
+      const result = await joinLobby({
+        roomCode,
+        playerId,
+        displayName: name,
+        profileIcon: icon,
+      });
       if (!result.ok) {
         if (result.reason === "not_found")
           return res
@@ -133,6 +151,7 @@ router.post(
         ownerId: result.state.ownerId,
         members: result.members,
         names: result.names,
+        icons: result.icons,
       });
 
       return res.status(200).json({
@@ -142,6 +161,7 @@ router.post(
         createdAt: result.state.createdAt,
         members: result.members, // list of ppl in the lobby (ids)
         names: result.names, // list of ppl in lobby (names)
+        icons: result.icons, // list of ppl in lobby (icons)
         joined: playerId,
         name: name || null,
       });
@@ -171,6 +191,7 @@ router.get("/:code", async (req, res, next) => {
       createdAt: lobby.state.createdAt,
       members: lobby.members, // list of player ids in the game
       names: lobby.names, // list of player names in the game
+      icons: lobby.icons, // list of player icons in the game
     });
   } catch (err) {
     next(err);
@@ -229,6 +250,8 @@ router.post(
         await addPlayer(gameId, pid);
         const displayName = lobby.names?.[pid] ?? null;
         if (displayName) await setPlayerName(gameId, pid, displayName);
+        const profileIcon = lobby.icons?.[pid] ?? null;
+        if (profileIcon) await setPlayerIcon(gameId, pid, profileIcon);
         await initPlayerScore(gameId, pid);
 
         // Track that this user played a game (for statistics)
@@ -250,6 +273,7 @@ router.post(
 
       const scores = await getScores(gameId);
       const names = await getPlayerNames(gameId);
+      const icons = await getPlayerIcons(gameId);
 
       // notify the game room that game has started (clients will join game:<id>)
       const stateDoc = await loadState(gameId); // to get startTs/duration
@@ -258,6 +282,7 @@ router.post(
         board,
         players: lobby.members,
         names,
+        icons,
         scores,
         startTs: stateDoc?.startTs ?? Date.now(),
         durationSec: stateDoc?.durationSec ?? 80,
@@ -288,12 +313,32 @@ router.post(
             console.error("Error reopening lobby after auto-finish:", e);
           }
 
-          // Get final scores and names for the ended event
-          const [players, scores, names] = await Promise.all([
+          // Get final scores, names, and icons for the ended event
+          const [players, scores, names, icons] = await Promise.all([
             listPlayers(gameId),
             getScores(gameId),
             getPlayerNames(gameId),
+            getPlayerIcons(gameId),
           ]);
+
+          // Update games played count for all players and determine winner
+          try {
+            // Update games played count for all players who participated
+            for (const playerId of Object.keys(scores)) {
+              await updateUserGamesPlayed(playerId, "wordhunt");
+            }
+
+            // Determine winner and update win count
+            const winnerId = Object.keys(scores).reduce((a, b) =>
+              scores[a] > scores[b] ? a : b
+            );
+            if (winnerId && scores[winnerId] > 0) {
+              await updateUserWinCount(winnerId, "wordhunt");
+            }
+          } catch (error) {
+            console.error("Auto-finish: Error updating user stats:", error);
+            // Don't fail the game finish if stats tracking fails
+          }
 
           // Notify all players that the game has ended
           emitToGame(gameId, "game:ended", {
@@ -301,6 +346,7 @@ router.post(
             endTs: Date.now(),
             scores,
             names,
+            icons,
           });
         } catch (error) {
           console.error(`Error auto-finishing game ${gameId}:`, error);

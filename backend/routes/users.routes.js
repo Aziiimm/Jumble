@@ -29,7 +29,7 @@ router.get(
         success: true,
         user: {
           ...req.user,
-          stats,
+          ...stats,
         },
       });
     } catch (error) {
@@ -92,13 +92,13 @@ router.put(
     try {
       console.log(`✏️ PUT /users/me - User: ${req.user?.sub || "Unknown"}`);
 
-      const { display_name, profile_picture } = req.body;
+      const { display_name, profile_icon } = req.body;
 
-      if (!display_name && !profile_picture) {
+      if (!display_name && !profile_icon) {
         return res.status(400).json({
           success: false,
           message:
-            "At least one field (display_name or profile_picture) must be provided",
+            "At least one field (display_name or profile_icon) must be provided",
         });
       }
 
@@ -113,17 +113,22 @@ router.put(
         });
       }
 
-      // Validate profile_picture if provided
-      if (profile_picture && typeof profile_picture !== "string") {
+      // Validate profile_icon if provided
+      if (
+        profile_icon &&
+        (typeof profile_icon !== "number" ||
+          profile_icon < 1 ||
+          profile_icon > 8)
+      ) {
         return res.status(400).json({
           success: false,
-          message: "Profile picture must be a string",
+          message: "Profile icon must be a number between 1 and 8",
         });
       }
 
       const updatedUser = await updateUserProfile(req.user.sub, {
         display_name: display_name?.trim(),
-        profile_picture,
+        profile_icon,
       });
 
       res.json({

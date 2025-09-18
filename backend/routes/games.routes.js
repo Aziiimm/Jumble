@@ -17,6 +17,7 @@ import {
   getScores,
   setPlayerName,
   getPlayerNames,
+  getPlayerIcons,
   startGame,
   hasSubmittedWord,
   addSubmittedWord,
@@ -54,11 +55,12 @@ router.get("/:id/state", async (req, res, next) => {
       try {
         const fin = await finishGame(gameId);
         if (fin && fin.ok) {
-          // Get final scores and names for the ended event
-          const [players, scores, names] = await Promise.all([
+          // Get final scores, names, and icons for the ended event
+          const [players, scores, names, icons] = await Promise.all([
             listPlayers(gameId),
             getScores(gameId),
             getPlayerNames(gameId),
+            getPlayerIcons(gameId),
           ]);
 
           // Emit game ended event when timer runs out
@@ -67,6 +69,7 @@ router.get("/:id/state", async (req, res, next) => {
             endTs: fin.state.endTs ?? Date.now(),
             scores,
             names,
+            icons,
           });
         }
       } catch {}
@@ -284,10 +287,11 @@ router.post(
         return res.status(500).json({ message: "failed to finish game" });
       }
 
-      const [players, scores, names] = await Promise.all([
+      const [players, scores, names, icons] = await Promise.all([
         listPlayers(gameId),
         getScores(gameId),
         getPlayerNames(gameId),
+        getPlayerIcons(gameId),
       ]);
 
       await saveFinishedGame({
@@ -312,7 +316,7 @@ router.post(
           scores[a] > scores[b] ? a : b
         );
         if (winnerId && scores[winnerId] > 0) {
-          await updateUserWinCount(winnerId, "wordhunt"); // Assuming wordhunt for now
+          await updateUserWinCount(winnerId, "wordhunt");
         }
       } catch (error) {
         console.error("Error updating user stats:", error);
@@ -334,6 +338,7 @@ router.post(
         endTs: fin.state.endTs ?? Date.now(),
         scores,
         names,
+        icons,
       });
 
       // if there was a room code, tell the lobby its open again

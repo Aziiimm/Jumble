@@ -106,7 +106,7 @@ export const createAuthenticatedApiFunctions = (
 
     updateUserProfile: (profileData: {
       display_name?: string;
-      profile_picture?: string;
+      profile_icon?: number;
     }) =>
       makeRequest("/users/me", {
         method: "PUT",

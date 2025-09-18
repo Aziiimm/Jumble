@@ -171,7 +171,7 @@ export const extractUser = async (req, res, next) => {
         sub: dbUser.sub,
         email: dbUser.email,
         display_name: dbUser.display_name,
-        profile_picture: dbUser.profile_picture,
+        profile_icon: dbUser.profile_icon,
         wordhunt_wins: dbUser.wordhunt_wins,
         timebomb_wins: dbUser.timebomb_wins,
         wordhunt_games_played: dbUser.wordhunt_games_played,

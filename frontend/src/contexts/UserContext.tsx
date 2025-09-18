@@ -13,13 +13,16 @@ import { createAuthenticatedApiFunctions } from "../services/authenticatedApi";
 
 interface UserProfile {
   display_name?: string;
-  profile_picture?: string;
+  profile_icon?: number;
   total_games_played?: number;
   total_wins?: number;
+  wordhunt_games_played?: number;
   wordhunt_wins?: number;
   wordhunt_win_rate?: number;
+  timebomb_games_played?: number;
   timebomb_wins?: number;
   timebomb_win_rate?: number;
+  overall_win_rate?: number;
 }
 
 interface UserContextType {
@@ -29,7 +32,7 @@ interface UserContextType {
   refreshProfile: () => Promise<void>;
   updateProfile: (profileData: {
     display_name?: string;
-    profile_picture?: string;
+    profile_icon?: number;
   }) => Promise<void>;
 }
 
@@ -80,7 +83,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
 
   const updateProfile = async (profileData: {
     display_name?: string;
-    profile_picture?: string;
+    profile_icon?: number;
   }) => {
     if (!isAuthenticated || !user) return;
 

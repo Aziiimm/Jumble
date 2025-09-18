@@ -3,6 +3,7 @@
 import React from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Spinner } from "./ui/spinner";
+import { getProfileIconPath } from "../utils/profileIconUtils";
 
 const UserProfile: React.FC = () => {
   const { user, logout, isLoading } = useAuth0();
@@ -36,7 +37,7 @@ const UserProfile: React.FC = () => {
         </button>
       </div>
       <img
-        src={user.picture}
+        src={user.picture || getProfileIconPath(1)}
         alt={user.name || "User"}
         className="h-8 w-8 rounded-full"
       />

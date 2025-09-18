@@ -3,6 +3,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useUser } from "../contexts/UserContext";
+import { getProfileIconPath } from "../utils/profileIconUtils";
 
 const Navbar: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth0();
@@ -41,17 +42,15 @@ const Navbar: React.FC = () => {
               className="flex items-center gap-3 rounded-xl bg-[#01685e] px-4 py-2 shadow-lg transition duration-150 ease-in-out hover:brightness-90"
             >
               {(() => {
-                const profilePic = userProfile?.profile_picture;
-                const auth0Pic = user?.picture;
-                const defaultPic = "/default_profile.png";
-                const finalPic =
-                  profilePic && profilePic !== "/default_profile.png"
-                    ? profilePic
-                    : auth0Pic || defaultPic;
+                // Always use profile icon from database if available, otherwise default icon
+                const profileIcon = userProfile?.profile_icon;
+                const finalSrc = profileIcon
+                  ? getProfileIconPath(profileIcon)
+                  : getProfileIconPath(1); // Default to icon 1
 
                 return (
                   <img
-                    src={finalPic}
+                    src={finalSrc}
                     alt={
                       userProfile?.display_name ||
                       user?.name ||

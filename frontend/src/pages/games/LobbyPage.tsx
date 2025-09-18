@@ -8,8 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { createAuthenticatedApiFunctions } from "@/services/authenticatedApi";
 import { useUser } from "@/contexts/UserContext";
 import { FaCrown, FaUser } from "react-icons/fa6";
-
-const defaultProfilePicture = "/default_profile.png";
+import { getProfileIconPath } from "@/utils/profileIconUtils";
 
 export default function LobbyPage() {
   const { code } = useParams<{ code: string }>(); // route like /lobby/:code
@@ -74,13 +73,13 @@ export default function LobbyPage() {
           </h2>
           <div className="space-y-3">
             {snapshot.members?.map((id) => {
-              // Use profile picture for current user, default for others
-              const profilePicture =
-                id === playerId && userProfile?.profile_picture
-                  ? userProfile.profile_picture !== defaultProfilePicture
-                    ? userProfile.profile_picture
-                    : user?.picture || defaultProfilePicture
-                  : defaultProfilePicture;
+              // Use icon from lobby data if available, otherwise fall back to current user's icon or default
+              const profileIcon =
+                snapshot.icons?.[id] ||
+                (id === playerId && userProfile?.profile_icon) ||
+                1; // Default icon
+
+              const profileSrc = getProfileIconPath(profileIcon);
 
               return (
                 <div
@@ -88,7 +87,7 @@ export default function LobbyPage() {
                   className={`flex items-center rounded-lg bg-white/10 p-3`}
                 >
                   <img
-                    src={profilePicture}
+                    src={profileSrc}
                     alt={snapshot.names?.[id] || id}
                     className="mr-3 h-10 w-10 rounded-full object-cover"
                   />

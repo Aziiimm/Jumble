@@ -76,26 +76,7 @@ app.get("/health/ws", (_req, res) => {
   res.json({ ok: Boolean(io), service: "socket.io" });
 });
 
-// Protected route - get current user info
-app.get(
-  "/users/me",
-  checkJwt,
-  extractUser,
-  requireAuth,
-  async (req, res, next) => {
-    try {
-      console.log(`🔍 GET /users/me - User: ${req.user?.sub || "Unknown"}`);
-
-      res.json({
-        success: true,
-        user: req.user,
-      });
-    } catch (e) {
-      console.error(`❌ GET /users/me - Error:`, e.message);
-      next(e);
-    }
-  }
-);
+// Removed conflicting /users/me endpoint - now handled by users.routes.js
 
 // Admin route - get all users (for testing)
 app.get(

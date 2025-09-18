@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { createAuthenticatedApiFunctions } from "@/services/authenticatedApi";
 import { Spinner } from "@/components/ui/spinner";
+import { FaTrophy } from "react-icons/fa";
 
 type GameType = "overall" | "wordhunter" | "timebomb";
 
@@ -14,6 +15,12 @@ interface Player {
   wordhunt_wins: number;
   timebomb_wins: number;
   overall_wins: number;
+  wordhunt_games_played: number;
+  timebomb_games_played: number;
+  overall_games_played: number;
+  overall_win_rate: number;
+  wordhunt_win_rate: number;
+  timebomb_win_rate: number;
   avatar?: string;
 }
 
@@ -65,6 +72,17 @@ const Leaderboard: React.FC = () => {
         return player.timebomb_wins;
       default:
         return player.overall_wins;
+    }
+  };
+
+  const getPlayerWinRate = (player: Player) => {
+    switch (filter) {
+      case "wordhunter":
+        return player.wordhunt_win_rate;
+      case "timebomb":
+        return player.timebomb_win_rate;
+      default:
+        return player.overall_win_rate;
     }
   };
 
@@ -137,8 +155,12 @@ const Leaderboard: React.FC = () => {
                         <h3 className="text-center text-xs font-bold sm:text-sm md:text-lg">
                           {topThree[1].name}
                         </h3>
-                        <p className="text-center text-xs opacity-80 sm:text-sm">
-                          {getPlayerWins(topThree[1])} wins
+                        <p className="flex items-center justify-center gap-1 text-center text-xs opacity-80 sm:text-sm">
+                          <FaTrophy className="text-xs" />
+                          {getPlayerWins(topThree[1])}
+                        </p>
+                        <p className="text-center text-xs opacity-70 sm:text-sm">
+                          {getPlayerWinRate(topThree[1])}% win rate
                         </p>
                       </div>
                     </div>
@@ -156,8 +178,12 @@ const Leaderboard: React.FC = () => {
                         <h3 className="text-center text-sm font-bold sm:text-base md:text-xl">
                           {topThree[0].name}
                         </h3>
-                        <p className="text-center text-xs opacity-80 sm:text-sm md:text-base">
-                          {getPlayerWins(topThree[0])} wins
+                        <p className="flex items-center justify-center gap-1 text-center text-xs opacity-80 sm:text-sm md:text-base">
+                          <FaTrophy className="text-xs" />
+                          {getPlayerWins(topThree[0])}
+                        </p>
+                        <p className="text-center text-xs opacity-70 sm:text-sm md:text-base">
+                          {getPlayerWinRate(topThree[0])}% win rate
                         </p>
                       </div>
                     </div>
@@ -175,8 +201,12 @@ const Leaderboard: React.FC = () => {
                         <h3 className="text-center text-xs font-bold sm:text-sm md:text-lg">
                           {topThree[2].name}
                         </h3>
-                        <p className="text-center text-xs opacity-80 sm:text-sm">
-                          {getPlayerWins(topThree[2])} wins
+                        <p className="flex items-center justify-center gap-1 text-center text-xs opacity-80 sm:text-sm">
+                          <FaTrophy className="text-xs" />
+                          {getPlayerWins(topThree[2])}
+                        </p>
+                        <p className="text-center text-xs opacity-70 sm:text-sm">
+                          {getPlayerWinRate(topThree[2])}% win rate
                         </p>
                       </div>
                     </div>
@@ -209,10 +239,13 @@ const Leaderboard: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold sm:text-xl">
+                      <div className="flex items-center justify-end gap-1 text-lg font-bold sm:text-xl">
+                        <FaTrophy className="text-sm" />
                         {getPlayerWins(player)}
                       </div>
-                      <div className="text-xs opacity-70">wins</div>
+                      <div className="text-xs opacity-60">
+                        {getPlayerWinRate(player)}% win rate
+                      </div>
                     </div>
                   </div>
                 ))}
