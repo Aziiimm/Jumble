@@ -1,24 +1,18 @@
 // routes/games.routes.js
 import express from "express";
-import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import { redis } from "../redis.js";
-import { generateBoard5x5 } from "../services/board.service.js";
 import { isValidPath, buildWord } from "../services/path.service.js";
 import { isValidWord as dictIsValid } from "../services/dictionary.service.js";
 import { scoreWordByLength } from "../services/scoring.service.js";
 import { saveFinishedGame } from "../data/pgGameRepo.js";
 import {
-  saveNewGame,
   loadBoard,
   loadState,
-  addPlayer,
-  initPlayerScore,
   listPlayers,
   getScores,
-  setPlayerName,
   getPlayerNames,
   getPlayerIcons,
-  startGame,
   hasSubmittedWord,
   addSubmittedWord,
   incrementPlayerScore,
@@ -33,6 +27,14 @@ import {
 } from "../services/user.service.js";
 
 const router = express.Router();
+
+// Rate limiting for game submissions
+const gameSubmissionLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 70, // limit each IP to 70 game submissions per minute
+  message: "Too many game submissions, please slow down.",
+  skipSuccessfulRequests: true,
+});
 
 // GET /:id/state -> returns game data
 router.get("/:id/state", async (req, res, next) => {
@@ -98,6 +100,7 @@ router.get("/:id/state", async (req, res, next) => {
 // POST /games/:id/submit (path->word, check dictionary, dedupe, update score)
 router.post(
   "/:id/submit",
+  gameSubmissionLimiter,
   checkJwt,
   extractUser,
   requireAuth,

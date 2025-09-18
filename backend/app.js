@@ -7,6 +7,7 @@
 
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { pool, dbOk } from "./db.js";
 import { redisOk } from "./redis.js";
 import gamesRouter from "./routes/games.routes.js";
@@ -27,11 +28,49 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" })); // Limit request size
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Simple request logging middleware
+// Security headers
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.originalUrl}`);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(limiter);
+
+// Stricter rate limiting for game submissions
+const gameSubmissionLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // limit each IP to 30 game submissions per minute
+  message: "Too many game submissions, please slow down.",
+  skipSuccessfulRequests: true,
+});
+
+// Request logging middleware
+app.use((req, _res, next) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`${req.method} ${req.originalUrl}`);
+  } else {
+    // Production logging - log errors and important events
+    console.log(
+      `${new Date().toISOString()} ${req.method} ${req.originalUrl} - IP: ${
+        req.ip
+      }`
+    );
+  }
   next();
 });
 

@@ -13,7 +13,13 @@ export const pool = new Pool({
   user: process.env.POSTGRES_USER || "postgres",
   password: process.env.POSTGRES_PASSWORD || "postgres",
   database: process.env.POSTGRES_DB || "jumble",
-  ssl: false, // disable SSL for local Docker/Postgres
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
+  max: 20, // Increase connection pool for production
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 export async function dbOk() {

@@ -30,7 +30,7 @@ import {
   listPlayers,
 } from "../data/redisGameRepo.js";
 import { emitToLobby, emitToGame } from "../realtime/sockets.js";
-import { requireAuth, debugJwt, checkJwt, extractUser } from "../auth.js";
+import { requireAuth, checkJwt, extractUser } from "../auth.js";
 import {
   updateUserGamesPlayed,
   updateUserWinCount,

@@ -8,10 +8,13 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
-  },"engines": { "node": "20.x" },"optionalDependencies": {
-  "@rollup/rollup-linux-x64-gnu": "^4.24.0"
-},
-
+  },
+  "engines": {
+    "node": "20.x"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.24.0"
+  },
   "dependencies": {
     "@auth0/auth0-react": "^2.4.0",
     "@radix-ui/react-checkbox": "^1.1.3",

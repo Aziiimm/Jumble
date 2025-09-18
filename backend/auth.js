@@ -17,29 +17,18 @@ if (!process.env.AUTH0_AUDIENCE) {
 // Simple JWT validation that bypasses the problematic library
 export const checkJwt = async (req, res, next) => {
   try {
-    // console.log("=== checkJwt middleware starting ===");
-    // console.log("Request method:", req.method);
-    // console.log("Request URL:", req.url);
-    // console.log("All headers:", Object.keys(req.headers));
-    // console.log("Authorization header:", req.headers.authorization);
-
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      // console.log("No valid Authorization header found");
-      // console.log("authHeader value:", authHeader);
       return res.status(401).json({ message: "No token provided" });
     }
 
     const token = authHeader.replace("Bearer ", "");
-    // console.log("Token extracted, length:", token.length);
 
     // For now, let's just decode and accept any valid JWT from Auth0
     const jwt = await import("jsonwebtoken");
     const decoded = jwt.default.decode(token, { complete: true });
-    // console.log("JWT decoded successfully");
 
     if (!decoded) {
-      // console.log("Failed to decode JWT");
       return res.status(401).json({ message: "Invalid token format" });
     }
 
@@ -71,38 +60,6 @@ export const checkJwt = async (req, res, next) => {
     console.error("JWT validation error:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
-};
-
-// Add debugging for JWT validation
-export const debugJwt = async (req, res, next) => {
-  // console.log("=== JWT Debug Info ===");
-  // console.log("AUTH0_DOMAIN:", process.env.AUTH0_DOMAIN);
-  // console.log("AUTH0_AUDIENCE:", process.env.AUTH0_AUDIENCE);
-  // console.log("Authorization header:", req.headers.authorization);
-  // console.log("All headers:", Object.keys(req.headers));
-
-  // Try to decode the token to see what's in it
-  // if (
-  //   req.headers.authorization &&
-  //   req.headers.authorization.startsWith("Bearer ")
-  // ) {
-  //   const token = req.headers.authorization.replace("Bearer ", "");
-  //   console.log("Token length:", token.length);
-  //   console.log("Token starts with:", token.substring(0, 20) + "...");
-
-  //   try {
-  //     const jwt = await import("jsonwebtoken");
-  //     const decoded = jwt.default.decode(token, { complete: true });
-  //     console.log("Decoded JWT header:", decoded?.header);
-  //     console.log("Decoded JWT payload:", decoded?.payload);
-  //   } catch (error) {
-  //     console.log("Error decoding JWT:", error.message);
-  //   }
-  // } else {
-  //   console.log("No valid Authorization header found");
-  // }
-  // console.log("=========================");
-  next();
 };
 
 // Custom audience validation middleware
