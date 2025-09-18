@@ -1,8 +1,8 @@
 // src/config/api.ts
 
 // Use env vars if set, otherwise default to proxy path
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "/api";
+const API_BASE_URL = import.meta.env.API_BASE_URL || "/api";
+const SOCKET_URL = import.meta.env.SOCKET_URL || "/api";
 
 export const config = {
   api: {
