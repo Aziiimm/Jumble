@@ -45,10 +45,24 @@ export function initSockets(httpServer) {
       socket.emit("lobby:joined", { roomCode });
     });
 
-    socket.on("game:join", ({ gameId }) => {
-      if (typeof gameId !== "string" || !gameId.startsWith("g_")) return;
+    socket.on("game:join", ({ gameId }, ack) => {
+      const ua = socket.handshake.headers["user-agent"] || "ua?";
+      if (typeof gameId !== "string" || !gameId.startsWith("g_")) {
+        console.log(
+          `❌ game:join invalid from ${socket.id} ua=${ua} payload=`,
+          gameId
+        );
+        return (
+          typeof ack === "function" && ack({ ok: false, error: "bad-gameId" })
+        );
+      }
+
       socket.join(`game:${gameId}`);
+      console.log(`✅ ${socket.id} joined game:${gameId} ua=${ua}`);
+
+      // keep your event, but also ack so client knows server processed it
       socket.emit("game:joined", { gameId });
+      if (typeof ack === "function") ack({ ok: true, gameId });
     });
 
     socket.on("lobby:leave", ({ roomCode }) => {
