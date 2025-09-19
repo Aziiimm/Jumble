@@ -9,9 +9,9 @@
 export function getProfileIconPath(iconNumber: number): string {
   if (iconNumber < 1 || iconNumber > 8) {
     console.warn(`Invalid icon number: ${iconNumber}. Using default icon.`);
-    return "/assets/icons/1.png";
+    return "/icons/1.png";
   }
-  return `/assets/icons/${iconNumber}.png`;
+  return `/icons/${iconNumber}.png`;
 }
 
 /**
