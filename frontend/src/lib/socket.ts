@@ -8,7 +8,7 @@ export const socket: Socket = io(config.socket.url, {
   path: "/api/socket.io",
   withCredentials: true,
   autoConnect: true, // reconnects automatically
-  transports: ["websocket"], // prefer WS
+  transports: ["websocket", "polling"], // prefer WS, fallback to polling if WS fails
 });
 
 if (import.meta.env.DEV) {
