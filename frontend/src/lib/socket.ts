@@ -5,10 +5,10 @@ import { config } from "../config/api";
 
 // create one shared Socket.IO connection for the whole app
 export const socket: Socket = io(config.socket.url, {
-  path: "/api/socket.io",
+  path: "/socket.io",
   withCredentials: true,
   autoConnect: true, // reconnects automatically
-  transports: ["polling"], // Use polling for Vercel proxy compatibility
+  transports: ["websocket", "polling"],
 });
 
 if (import.meta.env.DEV) {

@@ -1,8 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "http://3.88.157.186/:path*" },
     {
-      "source": "/((?!api|_next|assets|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)",
+      "source": "/((?!_next|assets|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)",
       "destination": "/"
     }
   ]

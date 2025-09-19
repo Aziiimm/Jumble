@@ -9,12 +9,12 @@ let io = null;
 
 export function initSockets(httpServer) {
   io = new Server(httpServer, {
-    path: "/api/socket.io",
+    path: "/socket.io",
     cors: {
       origin: [
         process.env.FRONTEND_URL || "http://localhost:5173",
         "https://jumble-nine.vercel.app",
-        "http://localhost:5173",
+        "https://3-88-157-186.sslip.io",
       ],
       credentials: true,
     },
