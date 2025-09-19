@@ -2,11 +2,7 @@
 
 // Use env vars if set, otherwise default to proxy path
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://3.88.157.186";
-
-// Check if we're in production and using direct backend connection
-const isDirectBackendConnection =
-  SOCKET_URL.includes("3.88.157.186") || SOCKET_URL.includes("localhost");
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "/api";
 
 export const config = {
   api: {
@@ -20,7 +16,6 @@ export const config = {
   },
   socket: {
     url: SOCKET_URL,
-    isDirectConnection: isDirectBackendConnection,
   },
 };
 

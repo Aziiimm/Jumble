@@ -5,12 +5,10 @@ import { config } from "../config/api";
 
 // create one shared Socket.IO connection for the whole app
 export const socket: Socket = io(config.socket.url, {
-  // Only use /api/socket.io path when using Vercel proxy
-  // For direct backend connections (dev and prod EC2), don't use path
-  ...(config.socket.isDirectConnection ? {} : { path: "/api/socket.io" }),
+  path: "/socket.io",
   withCredentials: true,
   autoConnect: true, // reconnects automatically
-  transports: ["websocket", "polling"], // prefer WS, fallback to polling if WS fails
+  transports: ["polling"], // Use polling for Vercel proxy compatibility
 });
 
 if (import.meta.env.DEV) {
