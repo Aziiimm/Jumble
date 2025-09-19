@@ -21,6 +21,23 @@ export function initSockets(httpServer) {
   });
 
   io.on("connection", (socket) => {
+    // 🔎 log mobile vs desktop behavior
+    try {
+      const ua = socket.handshake.headers["user-agent"] || "unknown-ua";
+      const t0 = socket.conn.transport.name; // initial transport
+      console.log(
+        `🔌 socket connected id=${socket.id} transport=${t0} ua="${ua}"`
+      );
+      socket.conn.on("upgrade", (t) => {
+        console.log(`⬆️  transport upgraded id=${socket.id} -> ${t.name}`);
+      });
+      socket.on("disconnect", (reason) => {
+        console.log(`❌ socket disconnected id=${socket.id} reason=${reason}`);
+      });
+    } catch (e) {
+      console.error("socket log error", e);
+    }
+
     // client asks to join a lobby room
     socket.on("lobby:join", ({ roomCode }) => {
       if (typeof roomCode !== "string" || !roomCode) return;
@@ -34,21 +51,17 @@ export function initSockets(httpServer) {
       socket.emit("game:joined", { gameId });
     });
 
-    // client asks to leave a lobby room
     socket.on("lobby:leave", ({ roomCode }) => {
       if (typeof roomCode !== "string" || !roomCode) return;
       socket.leave(`lobby:${roomCode}`);
       socket.emit("lobby:left", { roomCode });
     });
 
-    // client asks to leave a game room
     socket.on("game:leave", ({ gameId }) => {
       if (typeof gameId !== "string" || !gameId.startsWith("g_")) return;
       socket.leave(`game:${gameId}`);
       socket.emit("game:left", { gameId });
     });
-
-    socket.on("disconnect", (_reason) => {});
   });
 
   return io;
