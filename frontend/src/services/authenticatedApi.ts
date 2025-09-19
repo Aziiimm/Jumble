@@ -5,7 +5,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 
 // Custom hook for authenticated API calls
 export function useAuthenticatedApi() {
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, loginWithRedirect } = useAuth0();
 
   const makeAuthenticatedRequest = async (
     endpoint: string,
@@ -37,6 +37,22 @@ export function useAuthenticatedApi() {
       return response.json();
     } catch (error) {
       console.error("Authenticated API request failed:", error);
+
+      // If it's a refresh token error, redirect to login
+      if (
+        error instanceof Error &&
+        error.message.includes("Missing Refresh Token")
+      ) {
+        console.log("Refresh token missing, redirecting to login...");
+        await loginWithRedirect({
+          authorizationParams: {
+            audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+            scope: "openid profile email offline_access",
+          },
+        });
+        return;
+      }
+
       throw error;
     }
   };
@@ -49,29 +65,43 @@ export const createAuthenticatedApiFunctions = (
   getAccessTokenSilently: () => Promise<string>,
 ) => {
   const makeRequest = async (endpoint: string, options: RequestInit = {}) => {
-    const token = await getAccessTokenSilently();
-    const url = buildApiUrl(endpoint);
+    try {
+      const token = await getAccessTokenSilently();
+      const url = buildApiUrl(endpoint);
 
-    const defaultHeaders = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
+      const defaultHeaders = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
 
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-    });
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...defaultHeaders,
+          ...options.headers,
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(
-        `API request failed: ${response.status} ${response.statusText}`,
-      );
+      if (!response.ok) {
+        throw new Error(
+          `API request failed: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error("Authenticated API request failed:", error);
+
+      // If it's a refresh token error, throw a more specific error
+      if (
+        error instanceof Error &&
+        error.message.includes("Missing Refresh Token")
+      ) {
+        throw new Error("Authentication expired. Please log in again.");
+      }
+
+      throw error;
     }
-
-    return response.json();
   };
 
   return {

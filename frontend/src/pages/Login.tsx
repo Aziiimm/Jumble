@@ -18,6 +18,7 @@ export default function Login() {
         authorizationParams: {
           connection,
           audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: "openid profile email offline_access",
         },
       });
     } catch (error) {
@@ -36,6 +37,7 @@ export default function Login() {
         authorizationParams: {
           connection: "Username-Password-Authentication",
           audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: "openid profile email offline_access",
           login_hint: email,
           screen_hint: isSignUp ? "signup" : "login",
         },

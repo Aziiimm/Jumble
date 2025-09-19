@@ -12,6 +12,7 @@ export default function Auth0ProviderWithNavigate({
       authorizationParams={{
         redirect_uri: window.location.origin,
         audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+        scope: "openid profile email offline_access",
       }}
       cacheLocation="localstorage"
       useRefreshTokens
