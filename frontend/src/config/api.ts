@@ -4,6 +4,10 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://3.88.157.186";
 
+// Check if we're in production and using direct backend connection
+const isDirectBackendConnection =
+  SOCKET_URL.includes("3.88.157.186") || SOCKET_URL.includes("localhost");
+
 export const config = {
   api: {
     baseUrl: API_BASE_URL,
@@ -16,6 +20,7 @@ export const config = {
   },
   socket: {
     url: SOCKET_URL,
+    isDirectConnection: isDirectBackendConnection,
   },
 };
 
