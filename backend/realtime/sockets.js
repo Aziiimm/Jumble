@@ -9,6 +9,7 @@ let io = null;
 
 export function initSockets(httpServer) {
   io = new Server(httpServer, {
+    path: "/api/socket.io",
     cors: {
       origin: [
         process.env.FRONTEND_URL || "http://localhost:5173",
